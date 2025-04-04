@@ -12,15 +12,19 @@
     
 #endif
 
+#include "higui_event.hpp"
 
 // ===== Contains all info related to crossplatform window management =====
 namespace hi {
 // ===== Surface: A lightweight abstraction over OS-dependent function calls =====
     struct Surface {
         inline explicit Surface(int width, int height) noexcept
-            : handler_(window::create(width, height)) { }
+            : handler_(window::create(width, height)) 
+        {}
 
-        inline ~Surface() noexcept { window::destroy(handler_); }
+        inline ~Surface() noexcept { 
+            window::destroy(handler_); 
+        }
 
         Surface() = delete;
         Surface(const Surface&) = delete;
@@ -28,7 +32,9 @@ namespace hi {
         Surface(Surface&&) = delete;
         Surface& operator=(Surface&&) = delete;
 
-        void loop() const noexcept { window::loop(handler_); }
+        inline void loop() const noexcept { 
+            window::loop(handler_); 
+        }
 
         inline bool is_handler() const noexcept { 
 #ifdef __linux__
@@ -36,6 +42,10 @@ namespace hi {
 #elif defined(_WIN32)
             return handler_ != nullptr;
 #endif
+        }
+
+        inline window::Handler get_handler() const noexcept {
+            return handler_;
         }
 
         inline void set_title(const char* title) const noexcept {

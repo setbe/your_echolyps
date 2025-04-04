@@ -66,13 +66,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\build\</OutDir>
     <IntDir>$(SolutionDir)\build\obj\$(Configuration)_x64\</IntDir>
-    <TargetName>$(ProjectName)_x64_debug</TargetName>
+    <TargetName>$(ProjectName)_debug</TargetName>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(VULKAN_SDK)\Include;</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\build\</OutDir>
     <IntDir>$(SolutionDir)\build\obj\$(Configuration)_x64\</IntDir>
-    <TargetName>$(ProjectName)_x64</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(VULKAN_SDK)\Include;</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -135,10 +135,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\higui\higui_event.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\higui\higui_windows.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\higui\higui_event.hpp" />
     <ClInclude Include="..\src\higui\higui.hpp" />
     <ClInclude Include="..\src\higui\higui_utils.hpp" />
     <ClInclude Include="..\src\higui\higui_windows.hpp" />

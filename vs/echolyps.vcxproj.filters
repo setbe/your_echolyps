@@ -5,6 +5,9 @@
       <Filter>HiGUI</Filter>
     </ClCompile>
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\higui\higui_event.cpp">
+      <Filter>HiGUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Example">
@@ -22,6 +25,9 @@
       <Filter>HiGUI</Filter>
     </ClInclude>
     <ClInclude Include="..\src\higui\higui_utils.hpp">
+      <Filter>HiGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\higui\higui_event.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
   </ItemGroup>
