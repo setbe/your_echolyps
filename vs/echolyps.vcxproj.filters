@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\src\higui\higui_windows.cpp">
+      <Filter>HiGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Example">
+      <UniqueIdentifier>{ea50833d-7947-494e-a996-588775d4cc21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HiGUI">
+      <UniqueIdentifier>{3f62d37a-95f6-40b8-abe9-5df6f4703fe7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\higui\higui.hpp">
+      <Filter>HiGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\higui\higui_windows.hpp">
+      <Filter>HiGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\higui\higui_utils.hpp">
+      <Filter>HiGUI</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
