@@ -1,28 +1,24 @@
 #pragma once
 
-#if defined(__linux__)
-    
-#elif defined(_WIN32)
-#include "higui_windows.hpp"
-#elif defined(__APPLE__)
-    
-#elif defined(__ANDROID__)
-    
-#else
-    
-#endif
+#include <vulkan/vulkan.h>
 
+#include "higui_platform.hpp"
 #include "higui_event.hpp"
 
 // ===== Contains all info related to crossplatform window management =====
 namespace hi {
-// ===== Surface: A lightweight abstraction over OS-dependent function calls =====
+    // ===== Surface: A lightweight abstraction over OS-dependent function calls =====
     struct Surface {
-        inline explicit Surface(int width, int height) noexcept
-            : handler_(window::create(width, height)) 
-        {}
+    private:
+        window::Handler handler_;
+    public:
+        explicit Surface(int width, int height) noexcept
+            : handler_(window::create(width, height)) {} 
 
-        inline ~Surface() noexcept { 
+        explicit Surface(hi::window::Handler handler) noexcept
+            : handler_(handler) {}
+
+        ~Surface() noexcept { 
             window::destroy(handler_); 
         }
 
@@ -32,28 +28,20 @@ namespace hi {
         Surface(Surface&&) = delete;
         Surface& operator=(Surface&&) = delete;
 
-        inline void loop() const noexcept { 
+        void loop() const noexcept { 
             window::loop(handler_); 
         }
-
-        inline bool is_handler() const noexcept { 
-#ifdef __linux__
-            return handler_ != 0;
-#elif defined(_WIN32)
-            return handler_ != nullptr;
-#endif
+        
+        bool is_handler() const noexcept { return window::is_valid(handler_); }
+        window::Handler get_handler() const noexcept { return handler_; }
+        
+        void set_title(const char* title) const noexcept { 
+            window::set_title(handler_, title); 
         }
-
-        inline window::Handler get_handler() const noexcept {
-            return handler_;
+        
+        VkResult create_vulkan_surface(VkInstance instance, VkSurfaceKHR* surface) const noexcept { 
+            return window::create_vulkan_surface(handler_, instance, surface); 
         }
-
-        inline void set_title(const char* title) const noexcept {
-            window::set_title(handler_, title);
-        }
-
-    private:
-        window::Handler handler_;
     }; // struct Surface
 
 } // namespace hi

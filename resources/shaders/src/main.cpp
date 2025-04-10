@@ -6,126 +6,179 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <filesystem>
 
+#include <windows.h>
 
-// Determines final output filename from a given path
-std::string get_output_filename(const std::string& path) {
-    size_t pos1 = path.find_last_of("/\\");
-    std::string lastComponent = (pos1 == std::string::npos) ? path : path.substr(pos1 + 1);
-    if (lastComponent.find('.') != std::string::npos) {
-        return path;
+namespace fs = std::filesystem;
+
+// Hard-coded list of shader files to be compiled.
+static const std::vector<std::string> kShaderFiles = {
+    "default.vert",
+    "default.frag"
+};
+
+// Function prototypes (defined after main()).
+std::vector<unsigned char> read_file(const std::string& path);
+std::string to_cpp_array(const std::string& name, const std::vector<unsigned char>& data);
+std::string sanitize_name(const std::string& filename);
+
+// Return true if success (exit code 0)
+bool run_process(const std::wstring& command) {
+    STARTUPINFOW si = { sizeof(STARTUPINFOW) };
+    PROCESS_INFORMATION pi = {};
+
+    // Copy line, because CreateProcessW changes it
+    std::wstring cmdline = command;
+
+    BOOL success = CreateProcessW(
+        nullptr,
+        cmdline.data(),  // mutable buffer
+        nullptr, nullptr, FALSE,
+        CREATE_NO_WINDOW,  // no console
+        nullptr, nullptr,
+        &si, &pi
+    );
+
+    if (!success) {
+        std::cerr << "[ERROR] CreateProcess failed: " << GetLastError() << "\n";
+        return false;
     }
-    else {
-        std::string dir = path;
-        if (dir.back() != '/' && dir.back() != '\\') {
-            dir.push_back('\\');
-        }
-        return dir + "shaders.hpp";
-    }
+
+    // Wait
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    return exitCode == 0;
 }
 
-// Reads a file into a byte vector
-std::vector<unsigned char> read_file(const std::string& filename) {
-    std::ifstream ifs(filename, std::ios::binary);
-    if (!ifs)
-        throw std::runtime_error("Cannot open file " + filename);
-    return std::vector<unsigned char>(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-}
-
-// Converts binary data to C array in xxd -i style
-std::string array_to_cpp(const std::string& array_name, const std::vector<unsigned char>& data) {
-    std::ostringstream oss;
-    oss << "unsigned char " << array_name << "[] = {";
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (i % 12 == 0)
-            oss << "\n    ";
-        oss << "0x";
-        oss << std::hex;
-        oss.width(2);
-        oss.fill('0');
-        oss << static_cast<int>(data[i]);
-        if (i != data.size() - 1)
-            oss << ", ";
-    }
-    oss << "\n};\n";
-    oss << "unsigned int " << array_name << "_len = " << std::dec << data.size() << ";\n\n";
-    return oss.str();
-}
-
-int main(int argc, char* argv[]) {
+int main() {
     try {
-        // Parse -o argument
-        std::string outPath = "shaders.hpp";
-        for (int i = 1; i < argc; ++i) {
-            std::string arg(argv[i]);
-            if (arg == "-o" && i + 1 < argc) {
-                outPath = argv[++i];
-            }
-        }
-        outPath = get_output_filename(outPath);
+        fs::path currentDir = fs::current_path();
 
-        // Check VULKAN_SDK environment variable
+        // Suppose we want all the shaders in "../" relative to currentDir:
+        // e.g. currentDir is ".../vs", we want ".../resources/shaders".
+        // We'll combine these carefully:
+        fs::path shaderDir = currentDir;
+
+        // The output .hpp file:
+        fs::path outputFile = currentDir / ".." / ".." / "src" / "shaders.hpp";
+
+        // Check Vulkan SDK
         char* vulkanSdk = std::getenv("VULKAN_SDK");
         if (!vulkanSdk) {
             std::cerr << "[ERROR] VULKAN_SDK environment variable not set.\n";
             return 1;
         }
-        std::string vulkanSdkStr(vulkanSdk);
-        std::string glslcPath = vulkanSdkStr + "\\Bin\\glslc.exe";
+        fs::path glslc = fs::path(vulkanSdk) / "Bin" / "glslc.exe";
 
-        // Check if glslc.exe exists
-        std::ifstream glslcFile(glslcPath);
-        if (!glslcFile.good()) {
-            std::cerr << "[ERROR] glslc.exe not found at " << glslcPath << "\n";
-            return 1;
-        }
-        glslcFile.close();
-
-        // Compile vertex shader
-        std::string compileVertCmd = "\"" + glslcPath + "\" default.vert -o default.vert.spv";
-        std::cout << "Compiling vertex shader...\n";
-        if (std::system(compileVertCmd.c_str()) != 0) {
-            std::cerr << "[ERROR] Failed to compile default.vert\n";
+        if (!fs::exists(glslc)) {
+            std::cerr << "[ERROR] glslc.exe not found: " << glslc << "\n";
             return 1;
         }
 
-        // Compile fragment shader
-        std::string compileFragCmd = "\"" + glslcPath + "\" default.frag -o default.frag.spv";
-        std::cout << "Compiling fragment shader...\n";
-        if (std::system(compileFragCmd.c_str()) != 0) {
-            std::cerr << "[ERROR] Failed to compile default.frag\n";
-            return 1;
+        // Prepare the header buffer
+        std::ostringstream header;
+        header << "// Auto-generated shader header\n\n";
+
+        for (const auto& file : kShaderFiles) {
+            // First build the nominal path, then canonicalize it:
+            fs::path nominalInput = shaderDir / file;
+            // If the file must exist prior to compilation, canonical() should succeed:
+            fs::path inputPath = fs::canonical(nominalInput);
+
+            // For the .spv, we can place it in the same directory or in currentDir.
+            // If it doesn't exist yet, canonical() might fail. So we can do something like:
+            fs::path spvPath = fs::absolute(currentDir / (file + ".spv"));
+
+            std::wstringstream wcmd;
+            wcmd << L"\"" << glslc.wstring() << L"\" "
+                << L"\"" << inputPath.wstring() << L"\" "
+                << L"-o \"" << spvPath.wstring() << L"\"";
+
+            if (!run_process(wcmd.str())) {
+                std::cerr << "[ERROR] Failed to compile: " << file << "\n";
+                return 1;
+            }
+
+            // Read .spv
+            auto bytes = read_file(spvPath.string());
+
+            // Convert to C++ array
+            std::string varName = sanitize_name(file);
+            header << to_cpp_array(varName, bytes);
+
+            // Remove the .spv
+            std::remove(spvPath.string().c_str());
         }
 
-        std::cout << "[OK] Shaders compiled successfully.\n";
-
-        // Read generated .spv files
-        auto vertData = read_file("default.vert.spv");
-        auto fragData = read_file("default.frag.spv");
-
-        // Create output C++ header with embedded shader data
-        std::ostringstream output;
-        output << "// Auto-generated shader header\n\n";
-        output << array_to_cpp("default_vert_spv", vertData);
-        output << array_to_cpp("default_frag_spv", fragData);
-
-        std::ofstream ofs(outPath, std::ios::binary);
-        if (!ofs) {
-            std::cerr << "[ERROR] Could not write to output file " << outPath << "\n";
-            return 1;
+        // Write out the final .hpp
+        {
+            std::ofstream outFile(outputFile, std::ios::binary);
+            if (!outFile) {
+                std::cerr << "[ERROR] Cannot write to output: " << outputFile << "\n";
+                return 1;
+            }
+            outFile << header.str();
         }
-        ofs << output.str();
-        ofs.close();
-        std::cout << "Shaders embedded into " << outPath << "\n";
-
-        // Remove temporary .spv files
-        std::remove("default.vert.spv");
-        std::remove("default.frag.spv");
-
-        return 0;
+        std::cout << "[OK] Embedded shaders into: " << outputFile.string() << "\n";
     }
-    catch (const std::exception& ex) {
-        std::cerr << "[EXCEPTION] " << ex.what() << "\n";
+    catch (const std::exception& e) {
+        std::cerr << "[EXCEPTION] " << e.what() << "\n";
         return 1;
     }
+    return 0;
+}
+
+/*
+    Reads a binary file and returns its contents as a vector of unsigned char.
+*/
+std::vector<unsigned char> read_file(const std::string& path) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f) {
+        throw std::runtime_error("Cannot open file: " + path);
+    }
+    return { std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>() };
+}
+
+/*
+    Converts a vector of bytes into a valid C++ array declaration (xxd -i style).
+*/
+std::string to_cpp_array(const std::string& name, const std::vector<unsigned char>& data) {
+    std::ostringstream oss;
+    oss << "unsigned char " << name << "[] = {";
+    for (size_t i = 0; i < data.size(); ++i) {
+        if (i % 12 == 0) {
+            oss << "\n    ";
+        }
+        oss << "0x" << std::hex << std::uppercase;
+        oss.width(2);
+        oss.fill('0');
+        oss << static_cast<int>(data[i]);
+        if (i + 1 < data.size()) {
+            oss << ", ";
+        }
+    }
+    oss << "\n};\n";
+    oss << "unsigned int " << name << "_len = " << std::dec << data.size() << ";\n\n";
+    return oss.str();
+}
+
+/*
+    Replaces certain characters (e.g. '.' or '-') in the filename
+    to form a valid identifier, then appends "_spv" to the end.
+*/
+std::string sanitize_name(const std::string& filename) {
+    std::string result = filename;
+    for (char& c : result) {
+        if (c == '.' || c == '-') {
+            c = '_';
+        }
+    }
+    return result + "_spv";
 }

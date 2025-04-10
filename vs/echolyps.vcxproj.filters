@@ -8,27 +8,57 @@
     <ClCompile Include="..\src\higui\higui_event.cpp">
       <Filter>HiGUI</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\vulkan\pipeline.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vulkan\device.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Example">
-      <UniqueIdentifier>{ea50833d-7947-494e-a996-588775d4cc21}</UniqueIdentifier>
-    </Filter>
     <Filter Include="HiGUI">
       <UniqueIdentifier>{3f62d37a-95f6-40b8-abe9-5df6f4703fe7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{936c35a5-1ef3-4f01-86e8-349ed9b775a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shaders">
+      <UniqueIdentifier>{c563fb60-ab21-421d-a482-2938968da31f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Vulkan">
+      <UniqueIdentifier>{beaf296a-9404-4b0a-8e6b-a766f9bb0b2e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\higui\higui.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\higui\higui_windows.hpp">
+    <ClInclude Include="..\src\higui\higui_platform.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\higui\higui_utils.hpp">
+    <ClInclude Include="..\src\higui\higui_types.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
     <ClInclude Include="..\src\higui\higui_event.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\vulkan\pipeline.hpp">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vulkan\device.hpp">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resources\shaders\default.frag">
+      <Filter>Resources\Shaders</Filter>
+    </None>
+    <None Include="..\resources\shaders\default.vert">
+      <Filter>Resources\Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="echolyps.rc" />
   </ItemGroup>
 </Project>

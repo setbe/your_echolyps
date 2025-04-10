@@ -1,0 +1,1 @@
+On Windows -> build the project in `vs` folder -> run the file `compile.bat` in this folder

@@ -64,14 +64,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)\build\</OutDir>
-    <IntDir>$(SolutionDir)\build\obj\$(Configuration)_x64\</IntDir>
+    <OutDir>$(SolutionDir)build\</OutDir>
+    <IntDir>$(SolutionDir)build\obj\echolyps_$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)_debug</TargetName>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(VULKAN_SDK)\Include;</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)\build\</OutDir>
-    <IntDir>$(SolutionDir)\build\obj\$(Configuration)_x64\</IntDir>
+    <OutDir>$(SolutionDir)build\</OutDir>
+    <IntDir>$(SolutionDir)build\obj\echolyps_$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(VULKAN_SDK)\Include;</ExternalIncludePath>
   </PropertyGroup>
@@ -82,7 +82,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>Default</LanguageStandard_C>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <ExceptionHandling>false</ExceptionHandling>
@@ -97,6 +97,10 @@
       <Version>
       </Version>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -112,7 +116,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <CompileAs>CompileAsCpp</CompileAs>
       <AdditionalOptions>/GR- /Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <TreatWarningAsError>false</TreatWarningAsError>
@@ -133,17 +137,33 @@
       <Version>
       </Version>
     </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\higui\higui_event.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\higui\higui_windows.cpp" />
+    <ClCompile Include="..\src\vulkan\device.cpp" />
+    <ClCompile Include="..\src\vulkan\pipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\higui\higui_event.hpp" />
     <ClInclude Include="..\src\higui\higui.hpp" />
-    <ClInclude Include="..\src\higui\higui_utils.hpp" />
-    <ClInclude Include="..\src\higui\higui_windows.hpp" />
+    <ClInclude Include="..\src\higui\higui_types.hpp" />
+    <ClInclude Include="..\src\higui\higui_platform.hpp" />
+    <ClInclude Include="..\src\vulkan\device.hpp" />
+    <ClInclude Include="..\src\vulkan\pipeline.hpp" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\resources\shaders\default.frag" />
+    <None Include="..\resources\shaders\default.vert" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="echolyps.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
