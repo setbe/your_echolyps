@@ -206,4 +206,8 @@ namespace hi {
         return Error::None;
     }
 
+    void Pipeline::bind(VkCommandBuffer command_buffer) noexcept {
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
+    }
+
 } // namespace hi

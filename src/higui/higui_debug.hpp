@@ -43,6 +43,26 @@ namespace hi::debug {
             get_device_type_name(p.deviceType));
     }
 
+    static inline const char* get_device_type_name(const VkPresentModeKHR& mode) {
+        switch (mode) {
+        case VK_PRESENT_MODE_MAILBOX_KHR:
+            return "Mailbox";
+        case VK_PRESENT_MODE_IMMEDIATE_KHR:
+            return "Immediate";
+        case VK_PRESENT_MODE_FIFO_KHR:
+            return "Vsync (FIFO)";
+        case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+            return "Vsync (FIFO relaxed)";
+        default:
+            return "*unknown*";
+        };
+    }
+
+    inline void print_present_mode(const VkPresentModeKHR& mode) {
+        printf("Present mode: %s\n",
+            get_device_type_name(mode));
+    }
+
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL callback(
         VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,

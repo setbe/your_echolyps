@@ -68,7 +68,7 @@ namespace hi {
                 return { stage, code };
         }
 
-        VkCommandPool get_command_pool() { return this->command_pool_; }
+        VkCommandPool command_pool() { return this->command_pool_; }
         VkDevice device() { return this->device_; }
         VkSurfaceKHR surface() { return this->surface_; }
         VkQueue graphics_queue() { return this->graphics_queue_; }

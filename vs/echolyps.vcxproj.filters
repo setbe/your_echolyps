@@ -17,6 +17,7 @@
     <ClCompile Include="..\src\vulkan\swap_chain.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\engine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="HiGUI">
@@ -58,6 +59,7 @@
     <ClInclude Include="..\src\vulkan\swap_chain.hpp">
       <Filter>Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\engine.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resources\shaders\default.frag">

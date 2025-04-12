@@ -31,7 +31,7 @@ namespace hi {
     namespace window {
         Handler create(int width, int height, ::hi::Result& result) noexcept;
         void destroy(Handler handler) noexcept;
-        void loop(const Handler handler) noexcept;
+        bool poll_events(const Handler handler) noexcept;
         bool is_valid(const Handler handler) noexcept;
 
         VkResult create_vulkan_surface(

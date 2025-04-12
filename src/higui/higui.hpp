@@ -8,6 +8,7 @@
 // ===== Contains all info related to crossplatform window management =====
 namespace hi {
     // ===== Surface: A lightweight abstraction over OS-dependent function calls =====
+    // use `.init()`
     struct Surface {
     private:
         window::Handler handler_;
@@ -35,8 +36,8 @@ namespace hi {
         Surface(Surface&&) = delete;
         Surface& operator=(Surface&&) = delete;
 
-        inline void loop() const noexcept {
-            window::loop(handler_); 
+        inline bool poll_events() const noexcept {
+            return window::poll_events(handler_);
         }
         
         inline bool is_handler() const noexcept { return window::is_valid(handler_); }

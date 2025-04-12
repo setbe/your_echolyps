@@ -32,8 +32,10 @@ static LRESULT CALLBACK win_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
         break;
 
     case WM_PAINT:
-        render(handler);
-        break;
+        PAINTSTRUCT ps;
+        BeginPaint(hwnd, &ps);
+        EndPaint(hwnd, &ps);
+        return 0;
 
     case WM_KEYUP:
         if (wparam < 256) {
@@ -113,6 +115,11 @@ namespace hi::window {
             CW_USEDEFAULT, CW_USEDEFAULT, width, height,
             NULL, NULL, instance, NULL);
 
+        /*HWND hwnd = CreateWindowExW(0, HIGUI_WINDOW_CLASSNAME, L"", // NO RESIZING
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
+            CW_USEDEFAULT, CW_USEDEFAULT, width, height,
+            nullptr, nullptr, instance, nullptr);*/
+
         if (hwnd) {
             SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON)));
             SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON)));
@@ -129,13 +136,16 @@ namespace hi::window {
         handler = nullptr;
     }
 
-    void loop(const Handler handler) noexcept {
+    bool poll_events(const Handler handler) noexcept {
         MSG msg{};
-        while (GetMessageW(&msg, 0, 0, 0) > 0) {
+        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                return false;
+            }
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
-            hi::callback::update(handler);
         }
+        return true;
     }
 
     bool is_valid(const Handler handler) noexcept {

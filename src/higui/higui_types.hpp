@@ -50,6 +50,8 @@ namespace hi {
         CreateSyncObjects,
         CreatePipelineLayout,
 
+        CreateCommandBuffers,
+
         __Count__,
         __Max__ = 99
     };
@@ -86,6 +88,12 @@ namespace hi {
         CreateSyncObjects,
         FindSupportedFormat,
         CreatePipelineLayout,
+
+        AllocateCommandBuffers,
+        BeginCommandBuffer,
+        EndCommandBuffer,
+        AcquireNextImage,
+        SubmitCommandBuffers,
 
         __Count__,
         __Max__ = 99

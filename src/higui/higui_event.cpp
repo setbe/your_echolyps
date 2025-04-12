@@ -7,8 +7,6 @@ extern "C" const int _fltused = 0;
 namespace hi {
 
     namespace callback { // Callbacks
-        internal::VoidCallbackHandler render = internal::void_noop_win;
-        internal::VoidCallbackHandler update = internal::void_noop_win;
         internal::VoidCallbackHandlerIntInt resize = internal::void_noop_win_int_int;
         internal::VoidCallbackHandlerIntInt mouse_move = internal::void_noop_win_int_int;
         internal::VoidCallbackHandlerInt key_up = internal::void_noop_win_int;

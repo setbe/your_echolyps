@@ -44,6 +44,8 @@ namespace hi {
         Error create_shader_module(const uint32_t* HI_RESTRICT code, unsigned int code_size,
             VkShaderModule* HI_RESTRICT shader_module) noexcept;
 
+        void bind(VkCommandBuffer command_buffer) noexcept;
+
     private:
         EngineDevice& device_;
         VkPipeline graphics_pipeline_;
