@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#undef CreateWindow
 #include <Psapi.h> // psapi.lib
 #include <vulkan/vulkan_win32.h>
 
@@ -89,7 +90,7 @@ namespace hi {
 
 namespace hi::window {
     // check the result for nullptr
-    Handler create(int width, int height) noexcept {
+    Handler create(int width, int height, ::hi::Result& result) noexcept {
         static HMODULE instance = GetModuleHandleW(NULL);
         static unsigned char is_wc_registed = 0;
 
@@ -100,8 +101,10 @@ namespace hi::window {
                 .hInstance = instance,
                 .lpszClassName = HIGUI_WINDOW_CLASSNAME,
             };
-            if (!RegisterClassW(&wc))
+            if (!RegisterClassW(&wc)) {
+                result.error_code = ::hi::Error::CreateWindowClassname;
                 return nullptr;
+            }
             is_wc_registed = 1;
         }
 
@@ -113,6 +116,9 @@ namespace hi::window {
         if (hwnd) {
             SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON)));
             SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON)));
+        }
+        else {
+            result.error_code = ::hi::Error::CreateWindow;
         }
 
         return reinterpret_cast<Handler>(hwnd);
@@ -155,6 +161,17 @@ namespace hi::window {
             .hwnd = reinterpret_cast<HWND>(handler),
         };
         return vkCreateWin32SurfaceKHR(instance, &create_info, nullptr, surface);
+    }
+
+    void get_size(const Handler handler, int& width, int& height) noexcept {
+        RECT rect{};
+        if (GetClientRect(reinterpret_cast<HWND>(handler), &rect)) {
+            width = rect.right - rect.left;
+            height = rect.bottom - rect.top;
+        }
+        else {
+            width = height = 0;
+        }
     }
 
     void show_error(const Handler handler, StageError stage, Error code) noexcept {

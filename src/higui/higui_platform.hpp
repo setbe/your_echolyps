@@ -29,7 +29,7 @@ namespace hi {
     int exit(int) noexcept;
 
     namespace window {
-        Handler create(int width, int height) noexcept;
+        Handler create(int width, int height, ::hi::Result& result) noexcept;
         void destroy(Handler handler) noexcept;
         void loop(const Handler handler) noexcept;
         bool is_valid(const Handler handler) noexcept;
@@ -38,6 +38,8 @@ namespace hi {
             const Handler handler,
             VkInstance instance,
             VkSurfaceKHR* surface) noexcept;
+
+        void get_size(const Handler, int& width, int& height) noexcept;
 
 #ifdef _WIN32 
         // args: const void* restict, const char* restict

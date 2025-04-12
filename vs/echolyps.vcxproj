@@ -148,6 +148,7 @@
     <ClCompile Include="..\src\higui\higui_windows.cpp" />
     <ClCompile Include="..\src\vulkan\device.cpp" />
     <ClCompile Include="..\src\vulkan\pipeline.cpp" />
+    <ClCompile Include="..\src\vulkan\swap_chain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\higui\higui_debug.hpp" />
@@ -157,6 +158,7 @@
     <ClInclude Include="..\src\higui\higui_platform.hpp" />
     <ClInclude Include="..\src\vulkan\device.hpp" />
     <ClInclude Include="..\src\vulkan\pipeline.hpp" />
+    <ClInclude Include="..\src\vulkan\swap_chain.hpp" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

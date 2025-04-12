@@ -3,13 +3,28 @@ extern "C" const int _fltused;
 
 #ifndef HI_RESTRICT
 #ifdef __GNUC__
-#define RESTRICT __restrict__
+#define HI_RESTRICT __restrict__
 #elif defined(_MSC_VER)
 #define HI_RESTRICT __restrict
 #else
 #define HI_RESTRICT
 #endif
 #endif // !HI_RESTRICT
+
+// This macro sets the structure { (uint8_t)stage, (uint8_t)code }
+// and returns from the function if an error occurs
+#define HI_STAGE_CHECK(stage_enum, func)         \
+    stage = StageError::stage_enum;              \
+    if ((code = func()) != Error::None)          \
+        return Result { stage, code };
+
+// This macro shows `hi::Result` numbers to user and exits if error occurs.
+// Must be used in main() function in order to work properly.
+#define HI_CHECK_RESULT_AND_EXIT(result) \
+    if ((result).error_code != hi::Error::None) { \
+        hi::window::show_error(nullptr, (result).stage_error, (result).error_code); \
+        return hi::exit(static_cast<int>((result).error_code)); \
+    }
 
 #include <vulkan/vulkan.h>
 
@@ -25,7 +40,15 @@ namespace hi {
         CreateBuffer,
         CreateImageWithInfo,
 
+        CreateShaderModule,
         CreatePipeline,
+        CreateSwapChain,
+        CreateImageViews,
+        CreateRenderPass,
+        CreateDepthResources,
+        CreateFramebuffers,
+        CreateSyncObjects,
+        CreatePipelineLayout,
 
         __Count__,
         __Max__ = 99
@@ -34,8 +57,8 @@ namespace hi {
     enum class Error : uint8_t {
         None,
         InternalMemoryAlloc,
-        WindowInit,
-        WindowClassnameInit,
+        CreateWindow,
+        CreateWindowClassname,
         ValidationLayers,
         VulkanInstance,
         DebugMessenger,
@@ -55,6 +78,14 @@ namespace hi {
 
         CreateShaderModule,
         GraphicsPipeline,
+
+        CreateSwapChain,
+        CreateTextureImageView,
+        CreateRenderPass,
+        CreateFramebuffer,
+        CreateSyncObjects,
+        FindSupportedFormat,
+        CreatePipelineLayout,
 
         __Count__,
         __Max__ = 99

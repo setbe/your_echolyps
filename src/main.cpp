@@ -1,10 +1,7 @@
 #include "higui/higui.hpp"
 #include "vulkan/device.hpp"
 #include "vulkan/pipeline.hpp"
-
-#ifdef _WIN32
-extern void __stdcall ExitProcess(unsigned int);
-#endif
+#include "vulkan/swap_chain.hpp"
 
 using Handler = hi::window::Handler;
 constexpr int WIDTH = 800;
@@ -18,17 +15,12 @@ void key_up(Handler, int key) noexcept;
 void focus_lost(Handler) noexcept;
 
 int main() {
-    hi::Surface surface{WIDTH, HEIGHT};
+    hi::Surface surface;
+    
+    { // Init/Configure window
+        hi::Result result = surface.init(WIDTH, HEIGHT);
+        HI_CHECK_RESULT_AND_EXIT(result);
 
-    { // Check window
-        if (surface.is_handler() == false) {
-            constexpr hi::Error error = hi::Error::WindowInit;
-            hi::window::show_error(nullptr, hi::StageError::CreateWindow, error);
-            return hi::exit(static_cast<int>(error));
-        }
-    }
-
-    { // Setup window
         surface.set_title("Your Echolyps");
         hi::callback::update = update;
         hi::callback::resize = resize;
@@ -38,34 +30,42 @@ int main() {
     }
 
     hi::EngineDevice device{ surface };
-
     { // Init engine device
         hi::Result device_result = device.init();
-
-        if (device_result.error_code != hi::Error::None) {
-            hi::window::show_error(surface.get_handler(),
-                device_result.stage_error, device_result.error_code);
-
-            return hi::exit(static_cast<int>(device_result.error_code));
-        }
+        HI_CHECK_RESULT_AND_EXIT(device_result);
+    }
+    hi::SwapChain swap_chain{device, surface.get_extent()};
+    { // Init swap chain
+        hi::Result swap_chain_result = swap_chain.init();
+        HI_CHECK_RESULT_AND_EXIT(swap_chain_result);
     }
 
     hi::Pipeline pipeline{ device };
-    { // Init graphics pipeline
-        hi::PipelineConfigInfo default_pipeline_config_info = 
-            hi::Pipeline::default_config_info(WIDTH, HEIGHT);
+    VkPipelineLayout pipeline_layout;
+    { // Create pipeline
+        hi::Result result{
+            .stage_error = hi::StageError::CreatePipelineLayout,
+            .error_code = hi::Error::None
+        };
+        result.error_code =
+            pipeline.create_pipeline_layout(pipeline_layout);
+        HI_CHECK_RESULT_AND_EXIT(result);
         
-        hi::Error error = pipeline.init(default_pipeline_config_info);
+        hi::PipelineConfigInfo pipeline_config = hi::Pipeline::default_config_info(swap_chain.width(), swap_chain.height());
+        pipeline_config.render_pass = swap_chain.render_pass();
+        pipeline_config.pipeline_layout = pipeline_layout;
 
-        if (error != hi::Error::None) {
-            hi::window::show_error(surface.get_handler(), hi::StageError::CreatePipeline, error);
-            return hi::exit(static_cast<int>(error));
-        }
+        hi::Result pipeline_result = pipeline.init(pipeline_config);
+        HI_CHECK_RESULT_AND_EXIT(pipeline_result);
     }
 
     { // Run
         hi::trim_working_set();
         surface.loop();
+    }
+
+    { // Clean
+        vkDestroyPipelineLayout(device.device(), pipeline_layout, nullptr);
     }
 
     return hi::exit(0);

@@ -7,7 +7,6 @@ namespace hi {
     struct PipelineConfigInfo {
         VkViewport viewport;
         VkRect2D scissor;
-        VkPipelineViewportStateCreateInfo viewport_info;
         VkPipelineInputAssemblyStateCreateInfo input_assembly_info;
         VkPipelineRasterizationStateCreateInfo rasterization_info;
         VkPipelineMultisampleStateCreateInfo multisample_info;
@@ -19,9 +18,10 @@ namespace hi {
         uint32_t subpass = 0;
     };
 
+    // use `.init()`
     struct Pipeline {
-        inline explicit Pipeline(EngineDevice& device) noexcept
-            : device_{ device } {}
+        inline explicit Pipeline(EngineDevice& device_ref) noexcept
+            : device_{ device_ref } {}
 
         inline ~Pipeline() noexcept {
             vkDestroyShaderModule(device_.device(), vert_shader_, nullptr);
@@ -29,7 +29,7 @@ namespace hi {
             vkDestroyPipeline(device_.device(), graphics_pipeline_, nullptr);
         }
 
-        Error init(const PipelineConfigInfo& config_info) noexcept;
+        Result init(const PipelineConfigInfo& config_info) noexcept;
 
         Pipeline() = delete;
         Pipeline(const Pipeline&) = delete;
@@ -38,6 +38,8 @@ namespace hi {
         Pipeline& operator=(Pipeline&&) = delete;
 
         static PipelineConfigInfo default_config_info(uint32_t width, uint32_t hegiht) noexcept;
+        
+        Error create_pipeline_layout(VkPipelineLayout& pipeline_layout) noexcept;
 
         Error create_shader_module(const uint32_t* HI_RESTRICT code, unsigned int code_size,
             VkShaderModule* HI_RESTRICT shader_module) noexcept;

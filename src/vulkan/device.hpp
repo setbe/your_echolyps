@@ -6,23 +6,6 @@
 #include "../higui/higui_types.hpp"
 #include "../higui/higui_debug.hpp"
 
-// --- structs for swapchain support and queue
-struct swap_chain_support_details {
-    VkSurfaceCapabilitiesKHR capabilities;
-    VkSurfaceFormatKHR formats[16];
-    uint32_t format_count;
-    VkPresentModeKHR present_modes[8];
-    uint32_t present_mode_count;
-};
-
-struct queue_family_indices {
-    uint32_t graphics_family;
-    uint32_t present_family;
-    bool graphics_family_has_value = false;
-    bool present_family_has_value = false;
-    bool is_complete() { return graphics_family_has_value && present_family_has_value; }
-};
-
 #ifndef NDEBUG
 constexpr bool vk_enable_validation_layers = true;
 #else
@@ -40,6 +23,26 @@ static constexpr const char* vk_required_extensions[] = {
 };
 
 namespace hi {
+    // --- structs for swapchain support and queue
+    struct SwapChainSupportDetails {
+        using SurfaceFormat = VkSurfaceFormatKHR[16];
+        using PresentMode = VkPresentModeKHR[8];
+        VkSurfaceCapabilitiesKHR capabilities;
+        SurfaceFormat formats;
+        uint32_t format_count;
+        VkPresentModeKHR present_modes[8];
+        uint32_t present_mode_count;
+    };
+
+    struct QueueFamilyIndices {
+        uint32_t graphics_family;
+        uint32_t present_family;
+        bool graphics_family_has_value = false;
+        bool present_family_has_value = false;
+        bool is_complete() { return graphics_family_has_value && present_family_has_value; }
+    };
+
+    // use `.init()`
     class EngineDevice {
     public:
         inline explicit EngineDevice(hi::Surface& window) noexcept
@@ -51,26 +54,17 @@ namespace hi {
         EngineDevice(EngineDevice&&) = delete;
         EngineDevice& operator=(EngineDevice&&) = delete;
 
-        inline hi::Result init() noexcept {
-            // This macro sets the structure { (uint8_t)stage, (uint8_t)code }
-            // and returns from the function if an error occurs
-#define HI_STAGE_CHECK(stage_enum, func)             \
-    stage = hi::StageError::stage_enum;              \
-    if ((code = func()) != hi::Error::None)          \
-        return { stage, code };
-
-            hi::StageError stage;
-            hi::Error code;
+        inline Result init() noexcept {
+            StageError stage;
+            Error code;
             HI_STAGE_CHECK(CreateInstance, create_instance)
 #ifndef NDEBUG
                 HI_STAGE_CHECK(SetupDebugMessenger, setup_debug_messenger)
 #endif
-
                 HI_STAGE_CHECK(CreateSurface, create_surface)
                 HI_STAGE_CHECK(PickPhysicalDevice, pick_physical_device)
                 HI_STAGE_CHECK(CreateLogicalDevice, create_logical_device)
                 HI_STAGE_CHECK(CreateCommandPool, create_command_pool)
-#undef HI_STAGE_CHECK
                 return { stage, code };
         }
 
@@ -80,10 +74,10 @@ namespace hi {
         VkQueue graphics_queue() { return this->graphics_queue_; }
         VkQueue present_queue() { return this->present_queue_; }
 
-        swap_chain_support_details get_swapchain_support() { return query_swapchain_support(this->physical_device_); }
+        SwapChainSupportDetails get_swapchain_support() { return query_swapchain_support(this->physical_device_); }
         uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties) noexcept;
-        queue_family_indices find_physical_queue_families() { return find_queue_families(this->physical_device_); }
-        VkFormat find_supported_format(const VkFormat* candidates,
+        QueueFamilyIndices find_physical_queue_families() { return find_queue_families(this->physical_device_); }
+        VkFormat find_supported_format(Error& error, const VkFormat* candidates,
             uint32_t count,
             VkImageTiling tiling,
             VkFormatFeatureFlags features) noexcept;
@@ -126,10 +120,10 @@ namespace hi {
         bool check_validation_layer_support();
 #endif
 
-        queue_family_indices find_queue_families(VkPhysicalDevice device);
+        QueueFamilyIndices find_queue_families(VkPhysicalDevice device);
 
         bool check_device_extension_support(VkPhysicalDevice device);
-        swap_chain_support_details query_swapchain_support(VkPhysicalDevice device);
+        SwapChainSupportDetails query_swapchain_support(VkPhysicalDevice device);
 
         /* === Variables === */
 

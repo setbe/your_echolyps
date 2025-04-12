@@ -14,6 +14,9 @@
     <ClCompile Include="..\src\vulkan\device.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\vulkan\swap_chain.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="HiGUI">
@@ -51,6 +54,9 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\src\higui\higui_debug.hpp">
       <Filter>HiGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vulkan\swap_chain.hpp">
+      <Filter>Vulkan</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

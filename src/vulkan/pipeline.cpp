@@ -21,14 +21,6 @@ namespace hi {
             .extent = {width, height}
         };
 
-        config_info.viewport_info = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-            .viewportCount = 1,
-            .pViewports = &config_info.viewport,
-            .scissorCount = 1,
-            .pScissors = &config_info.scissor
-        };
-
         config_info.input_assembly_info = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -108,25 +100,28 @@ namespace hi {
         return hi::Error::None;
     }
 
-    Error Pipeline::init(const PipelineConfigInfo& config_info) noexcept {
+    Result Pipeline::init(const PipelineConfigInfo& config_info) noexcept {
         assert(config_info.pipeline_layout != VK_NULL_HANDLE &&
             "Cannot create graphics pipeline: No `.pipeline_layout` provided in config_info");
         assert(config_info.render_pass != VK_NULL_HANDLE &&
             "Cannot create graphics pipeline: No `.render_pass` provided in config_info");
-        Error error = Error::None;
+        StageError stage_error = StageError::CreateShaderModule;
+        Error error_code = Error::None;
 
         { // Shader compiling
-            if ((error = create_shader_module(
+            if ((error_code = create_shader_module(
                 default_vert_spv,
                 default_vert_spv_len * sizeof(default_vert_spv_len),
                 &vert_shader_)) != Error::None)
-                return error; // `Vertex` shader failed to compile
+                // `Vertex` shader failed to compile
+                return { stage_error, error_code };
 
-            if ((error = create_shader_module(
+            if ((error_code = create_shader_module(
                 default_frag_spv,
                 default_frag_spv_len * sizeof(default_frag_spv_len),
                 &frag_shader_)) != Error::None)
-                return error; // `Fragment` shader failed to compile
+                // `Fragment` shader failed to compile
+                return { stage_error, error_code };
         }
 
         VkPipelineShaderStageCreateInfo shader_stages[2];
@@ -160,13 +155,21 @@ namespace hi {
             .pVertexAttributeDescriptions = nullptr,
         };
 
+        VkPipelineViewportStateCreateInfo viewport_info {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+            .viewportCount = 1,
+            .pViewports = &config_info.viewport,
+            .scissorCount = 1,
+            .pScissors = &config_info.scissor
+        };
+
         VkGraphicsPipelineCreateInfo pipeline_info{
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .stageCount = 2,
             .pStages = shader_stages,
             .pVertexInputState = &vertex_input_info,
             .pInputAssemblyState = &config_info.input_assembly_info,
-            .pViewportState = &config_info.viewport_info,
+            .pViewportState = &viewport_info,
             .pRasterizationState = &config_info.rasterization_info,
             .pMultisampleState = &config_info.multisample_info,
             .pDepthStencilState = &config_info.depth_stencil_info,
@@ -180,11 +183,27 @@ namespace hi {
             .basePipelineHandle = VK_NULL_HANDLE, // handle = Optimization
             .basePipelineIndex = -1,
         };
+
+        stage_error = StageError::CreatePipeline;
         if (vkCreateGraphicsPipelines(device_.device(), // cache = Optimization
             VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &graphics_pipeline_) != VK_SUCCESS)
-            return hi::Error::GraphicsPipeline;
-        return hi::Error::None;
+            return { stage_error, hi::Error::GraphicsPipeline }; // Couldn't create graphics pipeline
+        return { stage_error, error_code };
 
+    }
+
+    Error Pipeline::create_pipeline_layout(VkPipelineLayout& pipeline_layout) noexcept {
+        VkPipelineLayoutCreateInfo layout_info{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = 0,
+            .pSetLayouts = nullptr,
+            .pushConstantRangeCount = 0,
+            .pPushConstantRanges = nullptr
+        };
+        if (vkCreatePipelineLayout(device_.device(), &layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
+            return Error::CreatePipelineLayout;
+        }
+        return Error::None;
     }
 
 } // namespace hi

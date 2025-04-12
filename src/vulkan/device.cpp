@@ -110,7 +110,7 @@ namespace hi {
     }
 
     Error EngineDevice::create_logical_device() {
-        queue_family_indices indices = find_queue_families(physical_device_);
+        QueueFamilyIndices indices = find_queue_families(physical_device_);
         uint32_t unique_families[2];
         uint32_t count = 0;
         if (indices.graphics_family_has_value) unique_families[count++] = indices.graphics_family;
@@ -154,7 +154,7 @@ namespace hi {
     }
 
     Error EngineDevice::create_command_pool() {
-        queue_family_indices queue_indices = find_queue_families(physical_device_);
+        QueueFamilyIndices queue_indices = find_queue_families(physical_device_);
         VkCommandPoolCreateInfo pool_info{ .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
             .queueFamilyIndex = queue_indices.graphics_family,
@@ -169,11 +169,11 @@ namespace hi {
 
 
     bool EngineDevice::is_device_suitable(VkPhysicalDevice device) {
-        queue_family_indices indices = find_queue_families(device);
+        QueueFamilyIndices indices = find_queue_families(device);
         bool extensions_supported = check_device_extension_support(device);
         bool swapchain_adequate = false;
         if (extensions_supported) {
-            swap_chain_support_details swapchain_support = query_swapchain_support(device);
+            SwapChainSupportDetails swapchain_support = query_swapchain_support(device);
             swapchain_adequate =
                 swapchain_support.format_count != 0
                 && swapchain_support.present_modes != 0;
@@ -206,8 +206,8 @@ namespace hi {
     }
 #endif
 
-    queue_family_indices EngineDevice::find_queue_families(VkPhysicalDevice device) {
-        queue_family_indices indices{};
+    QueueFamilyIndices EngineDevice::find_queue_families(VkPhysicalDevice device) {
+        QueueFamilyIndices indices{};
         uint32_t count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
 
@@ -256,8 +256,8 @@ namespace hi {
         return found[0];
     }
 
-    swap_chain_support_details EngineDevice::query_swapchain_support(VkPhysicalDevice device) {
-        swap_chain_support_details details;
+    SwapChainSupportDetails EngineDevice::query_swapchain_support(VkPhysicalDevice device) {
+        SwapChainSupportDetails details;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface_, &details.capabilities);
 
         uint32_t format_count;
@@ -298,6 +298,26 @@ namespace hi {
         }
         // Failed to find suitable memory type
         return UINT32_MAX;
+    }
+
+    VkFormat EngineDevice::find_supported_format(Error& error, const VkFormat* candidates,
+        uint32_t count,
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features) noexcept {
+        for (int i = 0; i < count; ++i) {
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(physical_device_, candidates[i], &props);
+
+            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+                return candidates[i];
+            }
+            else if (
+                tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+                return candidates[i];
+            }
+        }
+        error = Error::FindSupportedFormat;
+        return {};
     }
 
     Error EngineDevice::create_buffer(VkDeviceSize size,

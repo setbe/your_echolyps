@@ -12,8 +12,16 @@ namespace hi {
     private:
         window::Handler handler_;
     public:
-        inline explicit Surface(int width, int height) noexcept
-            : handler_{ window::create(width, height) } {}
+        inline explicit Surface() noexcept {};
+
+        inline Result init(int width, int height) noexcept {
+            Result result{
+                .stage_error = hi::StageError::CreateWindow,
+                .error_code = hi::Error::None
+            };
+            handler_ = window::create(width, height, result);
+            return result;
+        }
 
         inline explicit Surface(hi::window::Handler handler) noexcept
             : handler_{ handler } {}
@@ -22,7 +30,6 @@ namespace hi {
             window::destroy(handler_); 
         }
 
-        Surface() = delete;
         Surface(const Surface&) = delete;
         Surface& operator=(const Surface&) = delete;
         Surface(Surface&&) = delete;
@@ -41,6 +48,13 @@ namespace hi {
         
         inline VkResult create_vulkan_surface(VkInstance instance, VkSurfaceKHR* surface) const noexcept {
             return window::create_vulkan_surface(handler_, instance, surface); 
+        }
+
+        inline VkExtent2D get_extent() const noexcept {
+            int width, height;
+            window::get_size(handler_, width, height);
+            return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+
         }
     }; // struct Surface
 
