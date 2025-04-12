@@ -49,6 +49,9 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="..\src\higui\higui_debug.hpp">
+      <Filter>HiGUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resources\shaders\default.frag">

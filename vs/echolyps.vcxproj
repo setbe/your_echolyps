@@ -150,6 +150,7 @@
     <ClCompile Include="..\src\vulkan\pipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\higui\higui_debug.hpp" />
     <ClInclude Include="..\src\higui\higui_event.hpp" />
     <ClInclude Include="..\src\higui\higui.hpp" />
     <ClInclude Include="..\src\higui\higui_types.hpp" />

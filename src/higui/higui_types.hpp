@@ -15,6 +15,7 @@ extern "C" const int _fltused;
 
 namespace hi {
     enum class StageError : uint8_t {
+        CreateWindow,
         CreateInstance,
         SetupDebugMessenger,
         CreateSurface,
@@ -23,6 +24,8 @@ namespace hi {
         CreateCommandPool,
         CreateBuffer,
         CreateImageWithInfo,
+
+        CreatePipeline,
 
         __Count__,
         __Max__ = 99
@@ -49,6 +52,9 @@ namespace hi {
         ImageInit,
         ImageAlloc,
         ImageBind,
+
+        CreateShaderModule,
+        GraphicsPipeline,
 
         __Count__,
         __Max__ = 99

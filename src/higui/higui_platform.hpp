@@ -15,6 +15,13 @@ typedef char* LPSTR;
 #include "higui_types.hpp"
 
 namespace hi {
+    inline bool str_equal(const char* HI_RESTRICT a, const char* HI_RESTRICT b) {
+        while (*a && *b) {
+            if (*a != *b) return false;
+            ++a; ++b;
+        }
+        return *a == *b;
+    }
     void trim_working_set() noexcept;
 
     void* alloc(size_t size) noexcept;
