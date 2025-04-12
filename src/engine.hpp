@@ -72,6 +72,8 @@ namespace hi {
             {
                 draw_frame();
             }
+
+            vkDeviceWaitIdle(device.device());
         }
 
         Error draw_frame() noexcept;
