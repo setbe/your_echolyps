@@ -29,7 +29,9 @@ namespace hi {
             vkDestroyPipeline(device_.device(), graphics_pipeline_, nullptr);
         }
 
-        Result init(const PipelineConfigInfo& config_info) noexcept;
+        Result init(const PipelineConfigInfo& config_info,
+            uint32_t binding_count,
+            uint32_t attribute_count) noexcept;
 
         Pipeline() = delete;
         Pipeline(const Pipeline&) = delete;
@@ -38,7 +40,7 @@ namespace hi {
         Pipeline& operator=(Pipeline&&) = delete;
 
         static PipelineConfigInfo default_config_info(uint32_t width, uint32_t hegiht) noexcept;
-        
+
         Error create_pipeline_layout(VkPipelineLayout& pipeline_layout) noexcept;
 
         Error create_shader_module(const uint32_t* HI_RESTRICT code, unsigned int code_size,

@@ -9,7 +9,7 @@
 #include <Psapi.h> // psapi.lib
 #include <vulkan/vulkan_win32.h>
 
-#include "../../vs/resource.h"
+#include "../../vs/resource.h" // take header from `vs` directory
 
 static LRESULT CALLBACK win_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     using namespace hi::callback;
@@ -85,7 +85,7 @@ namespace hi {
     int exit(int code) noexcept {
 #if defined(_WIN32) && defined(NDEBUG) && !defined(_CONSOLE)
         ExitProcess(code);
-#endif
+#endif // When it's debug mode we just return zero
         return 0;
     }
 }
@@ -185,8 +185,7 @@ namespace hi::window {
     }
 
     void show_error(const Handler handler, StageError stage, Error code) noexcept {
-        constexpr size_t message_length = 16;
-        char message[message_length] = "Crash: S00 C00\0"; // S = stage, C = code
+        char message[] = "Crash: S00 C00\0"; // S = stage, C = code
         constexpr size_t index_stage = 7;
         constexpr size_t index_code = 11;
 

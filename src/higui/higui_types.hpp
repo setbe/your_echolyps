@@ -1,5 +1,8 @@
 #pragma once
+
+#ifdef _WIN32
 extern "C" const int _fltused;
+#endif // !_WIN32
 
 #ifndef HI_RESTRICT
 #ifdef __GNUC__
@@ -19,7 +22,7 @@ extern "C" const int _fltused;
         return Result { stage, code };
 
 // This macro shows `hi::Result` numbers to user and exits if error occurs.
-// Must be used in main() function in order to work properly.
+// Must be used in function, which returns `int`, in order to work properly.
 #define HI_CHECK_RESULT_AND_EXIT(result) \
     if ((result).error_code != hi::Error::None) { \
         hi::window::show_error(nullptr, (result).stage_error, (result).error_code); \
@@ -29,81 +32,6 @@ extern "C" const int _fltused;
 #include <vulkan/vulkan.h>
 
 namespace hi {
-    enum class StageError : uint8_t {
-        CreateWindow,
-        CreateInstance,
-        SetupDebugMessenger,
-        CreateSurface,
-        PickPhysicalDevice,
-        CreateLogicalDevice,
-        CreateCommandPool,
-        CreateBuffer,
-        CreateImageWithInfo,
-
-        CreateShaderModule,
-        CreatePipeline,
-        CreateSwapChain,
-        CreateImageViews,
-        CreateRenderPass,
-        CreateDepthResources,
-        CreateFramebuffers,
-        CreateSyncObjects,
-        CreatePipelineLayout,
-
-        CreateCommandBuffers,
-
-        __Count__,
-        __Max__ = 99
-    };
-
-    enum class Error : uint8_t {
-        None,
-        InternalMemoryAlloc,
-        CreateWindow,
-        CreateWindowClassname,
-        ValidationLayers,
-        VulkanInstance,
-        DebugMessenger,
-        VulkanSupport,
-        SuitableGpu,
-        SurfaceKhr,
-        LogicalDevice,
-        PhysicalDevice,
-        CommandPool,
-
-        SuitableMemoryType,
-        BufferInit,
-        BufferAlloc,
-        ImageInit,
-        ImageAlloc,
-        ImageBind,
-
-        CreateShaderModule,
-        GraphicsPipeline,
-
-        CreateSwapChain,
-        CreateTextureImageView,
-        CreateRenderPass,
-        CreateFramebuffer,
-        CreateSyncObjects,
-        FindSupportedFormat,
-        CreatePipelineLayout,
-
-        AllocateCommandBuffers,
-        BeginCommandBuffer,
-        EndCommandBuffer,
-        AcquireNextImage,
-        SubmitCommandBuffers,
-
-        __Count__,
-        __Max__ = 99
-    };
-
-    struct Result {
-        StageError stage_error;
-        Error error_code;
-    };
-
     // ===== Window stuff =====
     namespace window {
         // ===== Contains all info related to window backend =====
@@ -151,4 +79,80 @@ namespace hi {
             typedef void (*VoidCallbackHandlerIntInt)(::hi::window::Handler, int, int);
         } // namespace internal
     } // namespace callback
+
+    enum class StageError : uint8_t {
+        CreateWindow,
+        CreateInstance,
+        SetupDebugMessenger,
+        CreateSurface,
+        PickPhysicalDevice,
+        CreateLogicalDevice,
+        CreateCommandPool,
+        CreateBuffer,
+        CreateImageWithInfo,
+
+        CreateShaderModule,
+        CreatePipeline,
+        CreateSwapChain,
+        CreateImageViews,
+        CreateRenderPass,
+        CreateDepthResources,
+        CreateFramebuffers,
+        CreateSyncObjects,
+        CreatePipelineLayout,
+
+        CreateCommandBuffers,
+        ModelInit,
+
+        __Count__,
+        __Max__ = 99
+    }; // !StageError
+
+    enum class Error : uint8_t {
+        None,
+        InternalMemoryAlloc,
+        CreateWindow,
+        CreateWindowClassname,
+        ValidationLayers,
+        VulkanInstance,
+        DebugMessenger,
+        VulkanSupport,
+        SuitableGpu,
+        SurfaceKhr,
+        LogicalDevice,
+        PhysicalDevice,
+        CommandPool,
+
+        SuitableMemoryType,
+        BufferInit,
+        BufferAlloc,
+        ImageInit,
+        ImageAlloc,
+        ImageBind,
+
+        CreateShaderModule,
+        GraphicsPipeline,
+
+        CreateSwapChain,
+        CreateTextureImageView,
+        CreateRenderPass,
+        CreateFramebuffer,
+        CreateSyncObjects,
+        FindSupportedFormat,
+        CreatePipelineLayout,
+
+        AllocateCommandBuffers,
+        BeginCommandBuffer,
+        EndCommandBuffer,
+        AcquireNextImage,
+        SubmitCommandBuffers,
+
+        __Count__,
+        __Max__ = 99
+    }; // !Error
+
+    struct Result {
+        StageError stage_error;
+        Error error_code;
+    };
 } // namespace hi

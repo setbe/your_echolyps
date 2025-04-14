@@ -1,5 +1,7 @@
 #include "engine.hpp"
 
+#include "vulkan/model.hpp"
+
 namespace hi {
 
     Result Engine::create_command_buffers() noexcept {
@@ -22,11 +24,13 @@ namespace hi {
             .commandBufferCount = command_buffers_count,
         };
 
+        // Error: Couldn't allocate command buffers
         if (vkAllocateCommandBuffers(device.device(), &alloc_info, command_buffers) != VK_SUCCESS) {
             result.error_code = Error::AllocateCommandBuffers;
             return result;
         }
 
+        // For every command buffer
         for (uint32_t i = 0; i < command_buffers_count; ++i) {
             VkCommandBufferBeginInfo begin_info{
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -52,11 +56,18 @@ namespace hi {
             render_pass_info.clearValueCount = 2;
             render_pass_info.pClearValues = clear_values;
 
+            // Begin
             vkCmdBeginRenderPass(command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
+            // Bind
             pipeline.bind(command_buffers[i]);
-            vkCmdDraw(command_buffers[i], 3, 1, 0, 0);
+            model.bind(command_buffers[i]);
 
+            // Draw
+            model.draw(command_buffers[i]);
+
+
+            // End
             vkCmdEndRenderPass(command_buffers[i]);
             if (vkEndCommandBuffer(command_buffers[i]) != VK_SUCCESS) {
                 result.error_code = Error::EndCommandBuffer;
@@ -83,5 +94,4 @@ namespace hi {
 
         return Error::None;
     }
-
 } // namespace hi

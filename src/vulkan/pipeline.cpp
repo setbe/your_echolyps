@@ -2,6 +2,7 @@
 
 #include <assert.h>
 
+#include "model.hpp"
 #include "../shaders.hpp"
 
 namespace hi {
@@ -100,11 +101,15 @@ namespace hi {
         return hi::Error::None;
     }
 
-    Result Pipeline::init(const PipelineConfigInfo& config_info) noexcept {
+    Result Pipeline::init(const PipelineConfigInfo& config_info,
+        uint32_t binding_count,
+        uint32_t attribute_count) noexcept 
+    {
         assert(config_info.pipeline_layout != VK_NULL_HANDLE &&
             "Cannot create graphics pipeline: No `.pipeline_layout` provided in config_info");
         assert(config_info.render_pass != VK_NULL_HANDLE &&
             "Cannot create graphics pipeline: No `.render_pass` provided in config_info");
+
         StageError stage_error = StageError::CreateShaderModule;
         Error error_code = Error::None;
 
@@ -145,14 +150,20 @@ namespace hi {
             .pSpecializationInfo = nullptr,
         };
 
+        VkVertexInputBindingDescription binding_descs[1];
+        Model::Vertex::get_binding_description(binding_descs);
+
+        VkVertexInputAttributeDescription attribute_descs[2];
+        Model::Vertex::get_attribute_descriptions(attribute_descs);
+        
         VkPipelineVertexInputStateCreateInfo vertex_input_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             // Binding
-            .vertexBindingDescriptionCount = 0,
-            .pVertexBindingDescriptions = nullptr,
+            .vertexBindingDescriptionCount = binding_count,
+            .pVertexBindingDescriptions = binding_descs,
             // Attribute
-            .vertexAttributeDescriptionCount = 0,
-            .pVertexAttributeDescriptions = nullptr,
+            .vertexAttributeDescriptionCount = attribute_count,
+            .pVertexAttributeDescriptions = attribute_descs,
         };
 
         VkPipelineViewportStateCreateInfo viewport_info {

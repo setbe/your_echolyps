@@ -63,7 +63,7 @@ namespace hi {
         VkDebugUtilsMessengerCreateInfoEXT create_info{};
         debug::populate_messenger_create_info(create_info);
         if (debug::create_utils_messenger_ext(instance_, &create_info, nullptr, &debug_messenger_) != VK_SUCCESS)
-            // Failed to set up debug messenger
+            // Error: Failed to set up debug messenger
             return Error::DebugMessenger;
         return Error::None; // OK
     }
@@ -87,9 +87,9 @@ namespace hi {
 
         size_t devices_size = sizeof(VkPhysicalDevice) * count;
         VkPhysicalDevice* devices = static_cast<VkPhysicalDevice*>(
-            hi::alloc(devices_size)); // Allocation: Check.
+            hi::alloc(devices_size)); // Allocation: Check
         if (!devices)
-            return Error::InternalMemoryAlloc;
+            return Error::InternalMemoryAlloc; // Error: Allocation
 
         vkEnumeratePhysicalDevices(instance_, &count, devices);
         for (uint32_t i = 0; i < count; ++i) {
@@ -98,10 +98,10 @@ namespace hi {
                 break;
             }
         }
-        hi::free(devices, devices_size); // Allocation: Free.
+        hi::free(devices, devices_size); // Allocation: Free
 
         if (physical_device_ == VK_NULL_HANDLE)
-            return Error::SuitableGpu;
+            return Error::SuitableGpu; // Error: no suitable GPU devices
         vkGetPhysicalDeviceProperties(physical_device_, &properties_);
 #ifndef NDEBUG
         debug::print_physical_device(properties_);
@@ -119,9 +119,9 @@ namespace hi {
 
         size_t queue_create_infos_size = sizeof(VkDeviceQueueCreateInfo) * count;
         VkDeviceQueueCreateInfo* queue_create_infos = static_cast<VkDeviceQueueCreateInfo*>(
-            hi::alloc(queue_create_infos_size)); // Allocation: Check.
+            hi::alloc(queue_create_infos_size)); // Allocation: Check
         if (!queue_create_infos)
-            return Error::InternalMemoryAlloc;
+            return Error::InternalMemoryAlloc;  // Error: Allocation
 
         float queue_priority = 1.0f;
         for (uint32_t i = 0; i < count; ++i) {
@@ -144,7 +144,7 @@ namespace hi {
             .pEnabledFeatures = &device_features,
         };
         VkResult result = vkCreateDevice(physical_device_, &create_info, nullptr, &device_);
-        hi::free(queue_create_infos, queue_create_infos_size); // Allocation: Free.
+        hi::free(queue_create_infos, queue_create_infos_size); // Allocation: Free
 
         if (result != VK_SUCCESS)
             return Error::LogicalDevice;
@@ -190,7 +190,7 @@ namespace hi {
         vkEnumerateInstanceLayerProperties(&count, nullptr);
         size_t layers_size = sizeof(VkLayerProperties) * count;
         VkLayerProperties* layers = static_cast<VkLayerProperties*>(
-            hi::alloc(layers_size)); // Allocation: Check.
+            hi::alloc(layers_size)); // Allocation: Check
         if (!layers)
             return false;
         vkEnumerateInstanceLayerProperties(&count, layers);
@@ -201,7 +201,7 @@ namespace hi {
                 break;
             }
         }
-        hi::free(layers, layers_size); // Allocation: Free.
+        hi::free(layers, layers_size); // Allocation: Free
         return result;
     }
 #endif
@@ -213,7 +213,7 @@ namespace hi {
 
         size_t props_size = sizeof(VkQueueFamilyProperties) * count;
         VkQueueFamilyProperties* props = static_cast<VkQueueFamilyProperties*>(
-            hi::alloc(props_size)); // Allocation: Check.
+            hi::alloc(props_size)); // Allocation: Check
         if (!props)
             return indices;
 
@@ -231,7 +231,7 @@ namespace hi {
             }
             if (indices.is_complete()) break;
         }
-        hi::free(props, props_size); // Allocation: Free.
+        hi::free(props, props_size); // Allocation: Free
         return indices;
     }
 
@@ -252,7 +252,7 @@ namespace hi {
             if (str_equal(device_extensions_[0], available[i].extensionName))
                 found[0] = true;
         }
-        hi::free(available, available_size); // Allocation: Free.
+        hi::free(available, available_size); // Allocation: Free
         return found[0];
     }
 
@@ -304,7 +304,7 @@ namespace hi {
         uint32_t count,
         VkImageTiling tiling,
         VkFormatFeatureFlags features) noexcept {
-        for (int i = 0; i < count; ++i) {
+        for (uint32_t i = 0; i < count; ++i) {
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(physical_device_, candidates[i], &props);
 

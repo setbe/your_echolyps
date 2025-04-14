@@ -18,6 +18,9 @@
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="..\src\engine.cpp" />
+    <ClCompile Include="..\src\vulkan\model.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="HiGUI">
@@ -31,6 +34,9 @@
     </Filter>
     <Filter Include="Vulkan">
       <UniqueIdentifier>{beaf296a-9404-4b0a-8e6b-a766f9bb0b2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External">
+      <UniqueIdentifier>{61f7661c-8fa2-405b-a779-fc9f89c92ef3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -60,6 +66,12 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="..\src\engine.hpp" />
+    <ClInclude Include="..\src\vulkan\model.hpp">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\external\linmath.h">
+      <Filter>External</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resources\shaders\default.frag">

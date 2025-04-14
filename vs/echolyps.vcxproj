@@ -102,8 +102,8 @@
       </Command>
     </PreBuildEvent>
     <CustomBuildStep>
-      <Command>cd ../resources/shaders/
-compile.bat </Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -146,8 +146,8 @@ compile.bat </Command>
       </Command>
     </PreBuildEvent>
     <CustomBuildStep>
-      <Command>cd ../resources/shaders/
-compile.bat </Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -156,17 +156,20 @@ compile.bat </Command>
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\higui\higui_windows.cpp" />
     <ClCompile Include="..\src\vulkan\device.cpp" />
+    <ClCompile Include="..\src\vulkan\model.cpp" />
     <ClCompile Include="..\src\vulkan\pipeline.cpp" />
     <ClCompile Include="..\src\vulkan\swap_chain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\engine.hpp" />
+    <ClInclude Include="..\src\external\linmath.h" />
     <ClInclude Include="..\src\higui\higui_debug.hpp" />
     <ClInclude Include="..\src\higui\higui_event.hpp" />
     <ClInclude Include="..\src\higui\higui.hpp" />
     <ClInclude Include="..\src\higui\higui_types.hpp" />
     <ClInclude Include="..\src\higui\higui_platform.hpp" />
     <ClInclude Include="..\src\vulkan\device.hpp" />
+    <ClInclude Include="..\src\vulkan\model.hpp" />
     <ClInclude Include="..\src\vulkan\pipeline.hpp" />
     <ClInclude Include="..\src\vulkan\swap_chain.hpp" />
     <ClInclude Include="resource.h" />
