@@ -1,9 +1,5 @@
 #pragma once
-
-#include <vulkan/vulkan.h>
-
 #include "higui_platform.hpp"
-#include "higui_event.hpp"
 
 // ===== Contains all info related to crossplatform window management =====
 namespace hi {
@@ -11,17 +7,16 @@ namespace hi {
     // use `.init()`
     struct Surface {
     private:
-        window::Handler handler_;
+        window::Handler handler_{};
     public:
         inline explicit Surface() noexcept {};
 
-        inline Result init(int width, int height) noexcept {
-            Result result{
-                .stage_error = hi::StageError::CreateWindow,
-                .error_code = hi::Error::None
-            };
-            handler_ = window::create(width, height, result);
-            return result;
+        inline Error init(int width, int height, const Callback* callback) noexcept {
+            Error error = Error::None;
+            handler_ = window::create(width, height, error, callback);
+            if (error != Error::None)
+                return error;
+            return window::setup_opengl_context(handler_);
         }
 
         inline explicit Surface(hi::window::Handler handler) noexcept
@@ -45,17 +40,6 @@ namespace hi {
         
         inline void set_title(const char* title) const noexcept { 
             window::set_title(handler_, title); 
-        }
-        
-        inline VkResult create_vulkan_surface(VkInstance instance, VkSurfaceKHR* surface) const noexcept {
-            return window::create_vulkan_surface(handler_, instance, surface); 
-        }
-
-        inline VkExtent2D get_extent() const noexcept {
-            int width, height;
-            window::get_size(handler_, width, height);
-            return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-
         }
     }; // struct Surface
 

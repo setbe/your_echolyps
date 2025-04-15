@@ -14,22 +14,7 @@ extern "C" const int _fltused;
 #endif
 #endif // !HI_RESTRICT
 
-// This macro sets the structure { (uint8_t)stage, (uint8_t)code }
-// and returns from the function if an error occurs
-#define HI_STAGE_CHECK(stage_enum, func)         \
-    stage = StageError::stage_enum;              \
-    if ((code = func()) != Error::None)          \
-        return Result { stage, code };
-
-// This macro shows `hi::Result` numbers to user and exits if error occurs.
-// Must be used in function, which returns `int`, in order to work properly.
-#define HI_CHECK_RESULT_AND_EXIT(result) \
-    if ((result).error_code != hi::Error::None) { \
-        hi::window::show_error(nullptr, (result).stage_error, (result).error_code); \
-        return hi::exit(static_cast<int>((result).error_code)); \
-    }
-
-#include <vulkan/vulkan.h>
+#include "../external/glad.h"
 
 namespace hi {
     // ===== Window stuff =====
@@ -68,84 +53,72 @@ namespace hi {
     } // namespace internal
 
     // ===== Callback stuff =====
-    namespace callback {
-        namespace internal {
-            inline void void_noop_win(::hi::window::Handler) noexcept {}
-            inline void void_noop_win_int(::hi::window::Handler, int) noexcept {}
-            inline void void_noop_win_int_int(::hi::window::Handler, int, int) noexcept {}
+    struct Callback;
+    
+    namespace internal {
+        inline void noop(const Callback&) noexcept {}
+        inline void noop_int(const Callback&, int) noexcept {}
+        inline void noop_int_int(const Callback&, int, int) noexcept {}
 
-            typedef void (*VoidCallbackHandler)(::hi::window::Handler);
-            typedef void (*VoidCallbackHandlerInt)(::hi::window::Handler, int);
-            typedef void (*VoidCallbackHandlerIntInt)(::hi::window::Handler, int, int);
-        } // namespace internal
-    } // namespace callback
+        using VoidCallback = void (*)(const Callback&);
+        using VoidCallbackInt = void (*)(const Callback&, int);
+        using VoidCallbackIntInt = void (*)(const Callback&, int, int);
+    } // namespace internal
 
-    enum class StageError : uint8_t {
+    struct Callback {
+        inline Callback(void* user_data) noexcept
+            : user_data { user_data },
+            update{ internal::noop },
+            resize{ internal::noop_int_int },
+            mouse_move{ internal::noop_int_int },
+            key_up{ internal::noop_int },
+            key_down{ internal::noop_int },
+            focus_gained{ internal::noop },
+            focus_lost{ internal::noop }
+        { }
+
+        internal::VoidCallback update;
+        internal::VoidCallbackIntInt resize;
+        internal::VoidCallbackIntInt mouse_move;
+        internal::VoidCallbackInt key_up;
+        internal::VoidCallbackInt key_down;
+        internal::VoidCallback focus_gained;
+        internal::VoidCallback focus_lost;
+
+        template <typename T>
+        inline T* get_user_data() const noexcept {
+            return reinterpret_cast<T*>(user_data);
+        }
+
+    private:
+        void* user_data;
+    }; // struct Callback
+
+    // Key states (pressed — true, otherwise — false)
+    extern unsigned char key[256];
+
+    enum class StageError : unsigned char {
+        Opengl,
         CreateWindow,
-        CreateInstance,
-        SetupDebugMessenger,
-        CreateSurface,
-        PickPhysicalDevice,
-        CreateLogicalDevice,
-        CreateCommandPool,
-        CreateBuffer,
-        CreateImageWithInfo,
-
-        CreateShaderModule,
-        CreatePipeline,
-        CreateSwapChain,
-        CreateImageViews,
-        CreateRenderPass,
-        CreateDepthResources,
-        CreateFramebuffers,
-        CreateSyncObjects,
-        CreatePipelineLayout,
-
-        CreateCommandBuffers,
-        ModelInit,
 
         __Count__,
         __Max__ = 99
     }; // !StageError
 
-    enum class Error : uint8_t {
+    enum class Error : unsigned char {
         None,
         InternalMemoryAlloc,
-        CreateWindow,
+
+        CreateDummyWindowClassname,
+        CreateDummyWindow,
+
+        SetDummyPixelFormat,
+        NotSupportedRequiredWglExtensions,
+        ModernOpenglContext,
+
         CreateWindowClassname,
-        ValidationLayers,
-        VulkanInstance,
-        DebugMessenger,
-        VulkanSupport,
-        SuitableGpu,
-        SurfaceKhr,
-        LogicalDevice,
-        PhysicalDevice,
-        CommandPool,
-
-        SuitableMemoryType,
-        BufferInit,
-        BufferAlloc,
-        ImageInit,
-        ImageAlloc,
-        ImageBind,
-
-        CreateShaderModule,
-        GraphicsPipeline,
-
-        CreateSwapChain,
-        CreateTextureImageView,
-        CreateRenderPass,
-        CreateFramebuffer,
-        CreateSyncObjects,
-        FindSupportedFormat,
-        CreatePipelineLayout,
-
-        AllocateCommandBuffers,
-        BeginCommandBuffer,
-        EndCommandBuffer,
-        AcquireNextImage,
-        SubmitCommandBuffers,
+        CreateWindow,
+        LoadOpenglFunctions,
 
         __Count__,
         __Max__ = 99

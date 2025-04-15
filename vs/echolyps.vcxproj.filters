@@ -8,18 +8,9 @@
     <ClCompile Include="..\src\higui\higui_event.cpp">
       <Filter>HiGUI</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\vulkan\pipeline.cpp">
-      <Filter>Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\vulkan\device.cpp">
-      <Filter>Vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\vulkan\swap_chain.cpp">
-      <Filter>Vulkan</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\engine.cpp" />
-    <ClCompile Include="..\src\vulkan\model.cpp">
-      <Filter>Vulkan</Filter>
+    <ClCompile Include="..\src\external\glad.c">
+      <Filter>External</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -32,9 +23,6 @@
     <Filter Include="Resources\Shaders">
       <UniqueIdentifier>{c563fb60-ab21-421d-a482-2938968da31f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Vulkan">
-      <UniqueIdentifier>{beaf296a-9404-4b0a-8e6b-a766f9bb0b2e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="External">
       <UniqueIdentifier>{61f7661c-8fa2-405b-a779-fc9f89c92ef3}</UniqueIdentifier>
     </Filter>
@@ -46,30 +34,24 @@
     <ClInclude Include="..\src\higui\higui_platform.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\higui\higui_types.hpp">
-      <Filter>HiGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\higui\higui_event.hpp">
-      <Filter>HiGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\vulkan\pipeline.hpp">
-      <Filter>Vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\vulkan\device.hpp">
-      <Filter>Vulkan</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\src\higui\higui_debug.hpp">
       <Filter>HiGUI</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\vulkan\swap_chain.hpp">
-      <Filter>Vulkan</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\engine.hpp" />
-    <ClInclude Include="..\src\vulkan\model.hpp">
-      <Filter>Vulkan</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\external\linmath.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\higui\higui_types.hpp">
+      <Filter>HiGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\external\wglext.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\external\khrplatform.h">
+      <Filter>External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\external\glad.h">
       <Filter>External</Filter>
     </ClInclude>
   </ItemGroup>

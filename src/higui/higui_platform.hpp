@@ -15,29 +15,19 @@ typedef char* LPSTR;
 #include "higui_types.hpp"
 
 namespace hi {
-    inline bool str_equal(const char* HI_RESTRICT a, const char* HI_RESTRICT b) {
-        while (*a && *b) {
-            if (*a != *b) return false;
-            ++a; ++b;
-        }
-        return *a == *b;
-    }
-    void trim_working_set()                                                    noexcept;
+    void trim_working_set() noexcept;
 
     void* alloc(size_t size) /* - Allocate OS memory, use free(ptr, size) - */ noexcept;
-    void free(void* ptr, size_t size) /* - Release memory back ------------ */ noexcept;
-    int exit(int) /* - Forced current process exit -------------------------- */ noexcept;
+    void free(void* ptr, size_t size) /* - Release memory back - */ noexcept;
+    int exit(int) /* - Forced current process exit - */ noexcept;
 
     namespace window {
-        Handler create(int width, int height, ::hi::Result& result) /* ---- */ noexcept;
-        void destroy(Handler handler)  /* --------------------------------- */ noexcept;
+        Handler create(int width, int height, ::hi::Error&, const Callback*) noexcept;
+        Error setup_opengl_context(const Handler) noexcept;
+        void swap_buffers(const Handler) noexcept;
+        void destroy(Handler handler) noexcept;
         bool poll_events(const Handler handler) /* - false = window close - */ noexcept;
         bool is_valid(const Handler handler) /* - has valid value --------- */ noexcept;
-
-        VkResult create_vulkan_surface(
-            const Handler handler,
-            VkInstance instance,
-            VkSurfaceKHR* surface) /* - returns VkResult ------------------ */ noexcept;
 
         void get_size(const Handler, int& width, int& height) noexcept;
 
@@ -46,10 +36,11 @@ namespace hi {
 #else // args: int, const char*
         void set_title(Handler handler, const char* title) noexcept;
 #endif
+        void set_fullscreen(const Handler, bool enabled) noexcept;
+
+        int load_gl() noexcept; // returns 0 as failure
 
         // --- error handling
-
-        void show_error(const Handler, StageError, Error) noexcept;
-        void show_str_error(const char* title, const char* str) noexcept;
+        void show_error(Result) noexcept;
     } // namespace window
 } // namespace hi

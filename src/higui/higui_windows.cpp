@@ -1,32 +1,33 @@
 #include "higui_types.hpp"
-#include "higui_event.hpp"
 
 #define HIGUI_WINDOW_CLASSNAME L" "
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
 #undef CreateWindow
+
 #include <Psapi.h> // psapi.lib
-#include <vulkan/vulkan_win32.h>
 
 #include "../../vs/resource.h" // take header from `vs` directory
+#include <gl/GL.h>
+#include "../external/wglext.h"
 
 static LRESULT CALLBACK win_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-    using namespace hi::callback;
+    const hi::Callback* callback = reinterpret_cast<hi::Callback*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
     hi::window::Handler handler = reinterpret_cast<hi::window::Handler>(hwnd);
 
     switch (msg) {
     case WM_MOUSEMOVE: {
         int mouse_x = LOWORD(lparam);
         int mouse_y = HIWORD(lparam);
-        mouse_move(handler, mouse_x, mouse_y);
+        callback->mouse_move(handler, mouse_x, mouse_y);
         return 0;
     }
 
     case WM_KEYDOWN:
         if (wparam < 256) {
             hi::key[wparam] = 1;
-            key_down(handler, static_cast<int>(wparam));
+            callback->key_down(handler, static_cast<int>(wparam));
             return 0;
         }
         break;
@@ -40,29 +41,36 @@ static LRESULT CALLBACK win_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
     case WM_KEYUP:
         if (wparam < 256) {
             hi::key[wparam] = 0;
-            key_up(handler, static_cast<int>(wparam));
+            callback->key_up(handler, static_cast<int>(wparam));
         }
         return 0;
 
     case WM_SIZE: {
         int width = LOWORD(lparam); // new width
         int height = HIWORD(lparam); // new height
-        resize(handler, width, height);
+        callback->resize(handler, width, height);
         return 0;
     }
 
     case WM_SETFOCUS:
-        focus_gained(handler);
+        callback->focus_gained(handler);
         return 0;
 
     case WM_KILLFOCUS:
-        focus_lost(handler);
+        callback->focus_lost(handler);
         return 0;
 
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+
+    case WM_NCCREATE: {
+        auto cs = reinterpret_cast<CREATESTRUCT*>(lparam);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+        break;
     }
+    }
+
     return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
@@ -91,8 +99,7 @@ namespace hi {
 }
 
 namespace hi::window {
-    // check the result for nullptr
-    Handler create(int width, int height, ::hi::Result& result) noexcept {
+    Handler create(int width, int height, ::hi::Error& error, const Callback* callbacks) noexcept {
         static HMODULE instance = GetModuleHandleW(NULL);
         static unsigned char is_wc_registed = 0;
 
@@ -104,7 +111,7 @@ namespace hi::window {
                 .lpszClassName = HIGUI_WINDOW_CLASSNAME,
             };
             if (!RegisterClassW(&wc)) {
-                result.error_code = ::hi::Error::CreateWindowClassname;
+                error = ::hi::Error::CreateWindowClassname;
                 return nullptr;
             }
             is_wc_registed = 1;
@@ -113,22 +120,22 @@ namespace hi::window {
         HWND hwnd = CreateWindowExW(0, HIGUI_WINDOW_CLASSNAME, L"",
             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
             CW_USEDEFAULT, CW_USEDEFAULT, width, height,
-            NULL, NULL, instance, NULL);
-
-        /*HWND hwnd = CreateWindowExW(0, HIGUI_WINDOW_CLASSNAME, L"", // NO RESIZING
-            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,
-            CW_USEDEFAULT, CW_USEDEFAULT, width, height,
-            nullptr, nullptr, instance, nullptr);*/
+            NULL, NULL, instance, const_cast<Callback*>(callbacks));
 
         if (hwnd) {
             SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON)));
             SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON)));
+            ShowWindow(hwnd, SW_SHOWNORMAL);
         }
         else {
-            result.error_code = ::hi::Error::CreateWindow;
+            error = ::hi::Error::CreateWindow;
         }
 
         return reinterpret_cast<Handler>(hwnd);
+    }
+
+    void swap_buffers(const Handler handler) noexcept {
+        SwapBuffers(GetDC(reinterpret_cast<HWND>(handler)));
     }
 
     void destroy(Handler handler) noexcept {
@@ -139,9 +146,8 @@ namespace hi::window {
     bool poll_events(const Handler handler) noexcept {
         MSG msg{};
         while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT) {
+            if (msg.message == WM_QUIT)
                 return false;
-            }
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
@@ -164,14 +170,6 @@ namespace hi::window {
 
         SetWindowTextW(reinterpret_cast<HWND>(handler), result);
     }
-    VkResult create_vulkan_surface(const Handler handler, VkInstance instance, VkSurfaceKHR* surface) noexcept {
-        VkWin32SurfaceCreateInfoKHR create_info{
-            .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-            .hinstance = GetModuleHandle(nullptr),
-            .hwnd = reinterpret_cast<HWND>(handler),
-        };
-        return vkCreateWin32SurfaceKHR(instance, &create_info, nullptr, surface);
-    }
 
     void get_size(const Handler handler, int& width, int& height) noexcept {
         RECT rect{};
@@ -184,42 +182,134 @@ namespace hi::window {
         }
     }
 
-    void show_error(const Handler handler, StageError stage, Error code) noexcept {
-        char message[] = "Crash: S00 C00\0"; // S = stage, C = code
+    void show_error(Result result) noexcept {
+        char message[] = "Crash: S00 C00\0";
         constexpr size_t index_stage = 7;
         constexpr size_t index_code = 11;
 
-        static_assert(sizeof(stage) == 1U && sizeof(Error) == 1U);
+        static_assert(sizeof(result.stage_error) == 1U && sizeof(StageError) == 1U);
+        static_assert(sizeof(result.error_code) == 1U && sizeof(Error) == 1U);
 
-        const uint8_t stage_val = static_cast<uint8_t>(stage);
-        const uint8_t code_val = static_cast<uint8_t>(code);
+        const unsigned char stage_val =
+            static_cast<unsigned char>(static_cast<unsigned char>(result.stage_error) % 100);
+        const unsigned char code_val =
+            static_cast<unsigned char>(static_cast<unsigned char>(result.error_code) % 100);
 
-        // `stage` write
+
         message[index_stage + 1] = '0' + (stage_val / 10);
         message[index_stage + 2] = '0' + (stage_val % 10);
 
-        // `error code` write
         message[index_code + 1] = '0' + (code_val / 10);
         message[index_code + 2] = '0' + (code_val % 10);
 
-        MessageBoxExA(
-            reinterpret_cast<HWND>(handler),
-            message,
-            "Error",
-            MB_ICONERROR | MB_OK,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)
-        );
+        MessageBoxExA(nullptr, message, "Error", MB_ICONERROR | MB_OK, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT));
     }
 
-    void show_str_error(const char* title, const char* str) noexcept {
-        MessageBoxExA(
-            nullptr,
-            str,
-            title,
-            MB_ICONERROR | MB_OK,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)
-        );
+    Error setup_opengl_context(const Handler handler) noexcept {
+        // 1. Create a dummy window for loading WGL extensions
+        WNDCLASSA dummy_class = {
+                .style = CS_OWNDC,
+                .lpfnWndProc = DefWindowProcA,
+                .hInstance = GetModuleHandleA(NULL),
+                .lpszClassName = "d"
+        };
+
+        if (!RegisterClassA(&dummy_class))
+            return Error::CreateDummyWindowClassname;
+
+        HWND dummy_window = CreateWindowExA(0, dummy_class.lpszClassName,
+            " ", WS_OVERLAPPEDWINDOW,
+            CW_USEDEFAULT, CW_USEDEFAULT, 1, 1,
+            NULL, NULL, dummy_class.hInstance, NULL);
+
+        if (!dummy_window)
+            return Error::CreateDummyWindow;
+
+        // 1.2. Create dummy context for loading WGL extensions
+        HDC dummy_device = GetDC(dummy_window);
+        PIXELFORMATDESCRIPTOR pf_descriptor = {
+            .nSize = sizeof(pf_descriptor),
+            .nVersion = 1,
+            .dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+            .iPixelType = PFD_TYPE_RGBA,
+            .cColorBits = 32,
+            .cDepthBits = 24,
+            .cStencilBits = 8,
+            .iLayerType = PFD_MAIN_PLANE
+        };
+        int pixel_format = ChoosePixelFormat(dummy_device, &pf_descriptor);
+        if (pixel_format == 0 || !SetPixelFormat(dummy_device, pixel_format, &pf_descriptor))
+            return Error::SetDummyPixelFormat;
+
+        HGLRC dummy_context = wglCreateContext(dummy_device);
+        wglMakeCurrent(dummy_device, dummy_context);
+
+        // 2. Load WGL extensions
+        PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB =
+            (PFNWGLCHOOSEPIXELFORMATARBPROC)(void*)wglGetProcAddress("wglChoosePixelFormatARB");
+        PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB =
+            (PFNWGLCREATECONTEXTATTRIBSARBPROC)(void*)wglGetProcAddress("wglCreateContextAttribsARB");
+
+        if (!wglChoosePixelFormatARB || !wglCreateContextAttribsARB)
+            return Error::NotSupportedRequiredWglExtensions;
+
+        // Cleanup dummy context
+        wglMakeCurrent(NULL, NULL);
+        wglDeleteContext(dummy_context);
+        ReleaseDC(dummy_window, dummy_device);
+        DestroyWindow(dummy_window);
+
+        // 3. Set modern pixel format for the main window
+        HDC device = GetDC(reinterpret_cast<HWND>(handler));
+        int pixel_attrs[] = {
+            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+            WGL_COLOR_BITS_ARB, 32,
+            WGL_DEPTH_BITS_ARB, 24,
+            WGL_STENCIL_BITS_ARB, 8,
+            0 // The end of the array
+        };
+
+        int format;
+        UINT num_format;
+        wglChoosePixelFormatARB(device, pixel_attrs, NULL, 1, &format, &num_format);
+        SetPixelFormat(device, format, &pf_descriptor);
+
+        // 4. Create OpenGL 3.3 Core Profile context
+        HGLRC gl_context;
+        int context_attribs[] = {
+            WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+            WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+            WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+            0 };
+
+        gl_context = wglCreateContextAttribsARB(device, 0, context_attribs);
+
+        // Create modern context
+        if (!gl_context || !wglMakeCurrent(device, gl_context))
+            return Error::ModernOpenglContext;
+        return Error::None;
     }
 
+    static void* opengl_loader(const char* name) noexcept {
+        void* p = (void*)wglGetProcAddress(name);
+        if (!p) {
+            static HMODULE module = LoadLibraryA("opengl32.dll");
+            p = (void*)GetProcAddress(module, name);
+        }
+        return p;
+    }
+
+    int load_gl() noexcept {
+        if (!wglGetCurrentContext() || !wglGetCurrentDC())
+            return 0;
+        return gladLoadGLLoader(opengl_loader);
+    }
+
+    void set_fullscreen(const Handler, bool enabled) noexcept {
+
+    }
 
 } // namespace hi::window
