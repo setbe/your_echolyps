@@ -9,7 +9,7 @@
       <Filter>HiGUI</Filter>
     </ClCompile>
     <ClCompile Include="..\src\engine.cpp" />
-    <ClCompile Include="..\src\external\glad.c">
+    <ClCompile Include="..\src\external\glad.cpp">
       <Filter>External</Filter>
     </ClCompile>
   </ItemGroup>
@@ -51,7 +51,7 @@
     <ClInclude Include="..\src\external\khrplatform.h">
       <Filter>External</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\external\glad.h">
+    <ClInclude Include="..\src\external\glad.hpp">
       <Filter>External</Filter>
     </ClInclude>
   </ItemGroup>

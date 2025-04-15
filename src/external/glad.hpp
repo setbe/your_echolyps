@@ -43,10 +43,6 @@
 #define GLAPIENTRY APIENTRY
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct gladGLversionStruct {
     int major;
     int minor;
@@ -80,7 +76,7 @@ typedef void* (* GLADloadproc)(const char *name);
 # endif
 #endif
 
-GLAPI struct gladGLversionStruct GLVersion;
+constexpr gladGLversionStruct GLVersion{ .major = 3, .minor = 3 };
 
 GLAPI int gladLoadGL(void);
 
@@ -953,7 +949,7 @@ typedef void (APIENTRY *GLVULKANPROCNV)(void);
 #define GL_INT_2_10_10_10_REV 0x8D9F
 #ifndef GL_VERSION_1_0
 #define GL_VERSION_1_0 1
-GLAPI int GLAD_GL_VERSION_1_0;
+constexpr int GLAD_GL_VERSION_1_0 = 1;
 typedef void (APIENTRYP PFNGLCULLFACEPROC)(GLenum mode);
 GLAPI PFNGLCULLFACEPROC glad_glCullFace;
 #define glCullFace glad_glCullFace
@@ -1101,7 +1097,7 @@ GLAPI PFNGLVIEWPORTPROC glad_glViewport;
 #endif
 #ifndef GL_VERSION_1_1
 #define GL_VERSION_1_1 1
-GLAPI int GLAD_GL_VERSION_1_1;
+constexpr int GLAD_GL_VERSION_1_1 = 1;
 typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first, GLsizei count);
 GLAPI PFNGLDRAWARRAYSPROC glad_glDrawArrays;
 #define glDrawArrays glad_glDrawArrays
@@ -1144,7 +1140,7 @@ GLAPI PFNGLISTEXTUREPROC glad_glIsTexture;
 #endif
 #ifndef GL_VERSION_1_2
 #define GL_VERSION_1_2 1
-GLAPI int GLAD_GL_VERSION_1_2;
+constexpr int GLAD_GL_VERSION_1_2 = 1;
 typedef void (APIENTRYP PFNGLDRAWRANGEELEMENTSPROC)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices);
 GLAPI PFNGLDRAWRANGEELEMENTSPROC glad_glDrawRangeElements;
 #define glDrawRangeElements glad_glDrawRangeElements
@@ -1160,7 +1156,7 @@ GLAPI PFNGLCOPYTEXSUBIMAGE3DPROC glad_glCopyTexSubImage3D;
 #endif
 #ifndef GL_VERSION_1_3
 #define GL_VERSION_1_3 1
-GLAPI int GLAD_GL_VERSION_1_3;
+constexpr int GLAD_GL_VERSION_1_3 = 1;
 typedef void (APIENTRYP PFNGLACTIVETEXTUREPROC)(GLenum texture);
 GLAPI PFNGLACTIVETEXTUREPROC glad_glActiveTexture;
 #define glActiveTexture glad_glActiveTexture
@@ -1191,7 +1187,7 @@ GLAPI PFNGLGETCOMPRESSEDTEXIMAGEPROC glad_glGetCompressedTexImage;
 #endif
 #ifndef GL_VERSION_1_4
 #define GL_VERSION_1_4 1
-GLAPI int GLAD_GL_VERSION_1_4;
+constexpr int GLAD_GL_VERSION_1_4 = 1;
 typedef void (APIENTRYP PFNGLBLENDFUNCSEPARATEPROC)(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
 GLAPI PFNGLBLENDFUNCSEPARATEPROC glad_glBlendFuncSeparate;
 #define glBlendFuncSeparate glad_glBlendFuncSeparate
@@ -1222,7 +1218,7 @@ GLAPI PFNGLBLENDEQUATIONPROC glad_glBlendEquation;
 #endif
 #ifndef GL_VERSION_1_5
 #define GL_VERSION_1_5 1
-GLAPI int GLAD_GL_VERSION_1_5;
+constexpr int GLAD_GL_VERSION_1_5 = 1;
 typedef void (APIENTRYP PFNGLGENQUERIESPROC)(GLsizei n, GLuint *ids);
 GLAPI PFNGLGENQUERIESPROC glad_glGenQueries;
 #define glGenQueries glad_glGenQueries
@@ -1283,7 +1279,7 @@ GLAPI PFNGLGETBUFFERPOINTERVPROC glad_glGetBufferPointerv;
 #endif
 #ifndef GL_VERSION_2_0
 #define GL_VERSION_2_0 1
-GLAPI int GLAD_GL_VERSION_2_0;
+constexpr int GLAD_GL_VERSION_2_0 = 1;
 typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC)(GLenum modeRGB, GLenum modeAlpha);
 GLAPI PFNGLBLENDEQUATIONSEPARATEPROC glad_glBlendEquationSeparate;
 #define glBlendEquationSeparate glad_glBlendEquationSeparate
@@ -1566,7 +1562,7 @@ GLAPI PFNGLVERTEXATTRIBPOINTERPROC glad_glVertexAttribPointer;
 #endif
 #ifndef GL_VERSION_2_1
 #define GL_VERSION_2_1 1
-GLAPI int GLAD_GL_VERSION_2_1;
+constexpr int GLAD_GL_VERSION_2_1 = 1;
 typedef void (APIENTRYP PFNGLUNIFORMMATRIX2X3FVPROC)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 GLAPI PFNGLUNIFORMMATRIX2X3FVPROC glad_glUniformMatrix2x3fv;
 #define glUniformMatrix2x3fv glad_glUniformMatrix2x3fv
@@ -1588,7 +1584,7 @@ GLAPI PFNGLUNIFORMMATRIX4X3FVPROC glad_glUniformMatrix4x3fv;
 #endif
 #ifndef GL_VERSION_3_0
 #define GL_VERSION_3_0 1
-GLAPI int GLAD_GL_VERSION_3_0;
+constexpr int GLAD_GL_VERSION_3_0 = 1;
 typedef void (APIENTRYP PFNGLCOLORMASKIPROC)(GLuint index, GLboolean r, GLboolean g, GLboolean b, GLboolean a);
 GLAPI PFNGLCOLORMASKIPROC glad_glColorMaski;
 #define glColorMaski glad_glColorMaski
@@ -1844,7 +1840,7 @@ GLAPI PFNGLISVERTEXARRAYPROC glad_glIsVertexArray;
 #endif
 #ifndef GL_VERSION_3_1
 #define GL_VERSION_3_1 1
-GLAPI int GLAD_GL_VERSION_3_1;
+constexpr int GLAD_GL_VERSION_3_1 = 1;
 typedef void (APIENTRYP PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
 GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
 #define glDrawArraysInstanced glad_glDrawArraysInstanced
@@ -1884,7 +1880,7 @@ GLAPI PFNGLUNIFORMBLOCKBINDINGPROC glad_glUniformBlockBinding;
 #endif
 #ifndef GL_VERSION_3_2
 #define GL_VERSION_3_2 1
-GLAPI int GLAD_GL_VERSION_3_2;
+constexpr int GLAD_GL_VERSION_3_2 = 1;
 typedef void (APIENTRYP PFNGLDRAWELEMENTSBASEVERTEXPROC)(GLenum mode, GLsizei count, GLenum type, const void *indices, GLint basevertex);
 GLAPI PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex;
 #define glDrawElementsBaseVertex glad_glDrawElementsBaseVertex
@@ -1945,7 +1941,7 @@ GLAPI PFNGLSAMPLEMASKIPROC glad_glSampleMaski;
 #endif
 #ifndef GL_VERSION_3_3
 #define GL_VERSION_3_3 1
-GLAPI int GLAD_GL_VERSION_3_3;
+constexpr int GLAD_GL_VERSION_3_3 = 1;
 typedef void (APIENTRYP PFNGLBINDFRAGDATALOCATIONINDEXEDPROC)(GLuint program, GLuint colorNumber, GLuint index, const GLchar *name);
 GLAPI PFNGLBINDFRAGDATALOCATIONINDEXEDPROC glad_glBindFragDataLocationIndexed;
 #define glBindFragDataLocationIndexed glad_glBindFragDataLocationIndexed
@@ -2120,10 +2116,6 @@ GLAPI PFNGLSECONDARYCOLORP3UIPROC glad_glSecondaryColorP3ui;
 typedef void (APIENTRYP PFNGLSECONDARYCOLORP3UIVPROC)(GLenum type, const GLuint *color);
 GLAPI PFNGLSECONDARYCOLORP3UIVPROC glad_glSecondaryColorP3uiv;
 #define glSecondaryColorP3uiv glad_glSecondaryColorP3uiv
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

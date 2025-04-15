@@ -295,10 +295,12 @@ namespace hi::window {
 
     static void* opengl_loader(const char* name) noexcept {
         void* p = (void*)wglGetProcAddress(name);
-        if (!p) {
+
+        if (!p || p == (void*)0x1 || p == (void*)0x2 || p == (void*)0x3 || p == (void*)-1) {
             static HMODULE module = LoadLibraryA("opengl32.dll");
             p = (void*)GetProcAddress(module, name);
         }
+
         return p;
     }
 

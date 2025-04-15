@@ -23,6 +23,7 @@ namespace hi {
         HI_CHECK_STAGE_CODE_AND_EXIT();
 
 
+
         surface.set_title("Your Echolyps");
         callback.resize = framebuffer_resize_adapter;
 

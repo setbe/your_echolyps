@@ -1,12 +1,10 @@
 #pragma once
 #include "higui/higui.hpp"
-#include "external/glad.h"
+#include "external/glad.hpp"
 
 using Handler = hi::window::Handler;
 constexpr int WIDTH = 800;
 constexpr int HEIGHT = 800;
-
-#include <stdio.h>
 
 namespace hi {
     // use `.init()`

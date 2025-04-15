@@ -14,7 +14,7 @@ extern "C" const int _fltused;
 #endif
 #endif // !HI_RESTRICT
 
-#include "../external/glad.h"
+#include "../external/glad.hpp"
 
 namespace hi {
     // ===== Window stuff =====
