@@ -20,11 +20,15 @@ namespace hi {
     void* alloc(size_t size) /* - Allocate OS memory, use free(ptr, size) - */ noexcept;
     void free(void* ptr, size_t size) /* - Release memory back - */ noexcept;
     int exit(int) /* - Forced current process exit - */ noexcept;
+    void panic(Result) noexcept;
+    void panic_notify(Error, const char* msg) noexcept;
+    void sleep(unsigned ms) noexcept;
 
+    // ===== Contains all info related to crossplatform window management =====
     namespace window {
-        Handler create(int width, int height, ::hi::Error&, const Callback*) noexcept;
-        Error setup_opengl_context(const Handler) noexcept;
-        void swap_buffers(const Handler) noexcept;
+        Handler create(const Callback*, GraphicsContext&, int width, int height) noexcept;
+        void setup_opengl_context(const Handler HI_RESTRICT, const GraphicsContext HI_RESTRICT) noexcept;
+        void swap_buffers(const GraphicsContext) noexcept;
         void destroy(Handler handler) noexcept;
         bool poll_events(const Handler handler) /* - false = window close - */ noexcept;
         bool is_valid(const Handler handler) /* - has valid value --------- */ noexcept;
@@ -36,11 +40,14 @@ namespace hi {
 #else // args: int, const char*
         void set_title(Handler handler, const char* title) noexcept;
 #endif
+
         void set_fullscreen(const Handler, bool enabled) noexcept;
 
-        int load_gl() noexcept; // returns 0 as failure
+        void load_gl() noexcept;
 
-        // --- error handling
-        void show_error(Result) noexcept;
+#ifdef _WIN32
+        void create_class() noexcept;
+#endif
+
     } // namespace window
 } // namespace hi

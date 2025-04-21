@@ -5,10 +5,6 @@
       <Filter>HiGUI</Filter>
     </ClCompile>
     <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\higui\higui_event.cpp">
-      <Filter>HiGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\engine.cpp" />
     <ClCompile Include="..\src\external\glad.cpp">
       <Filter>External</Filter>
     </ClCompile>
@@ -54,6 +50,8 @@
     <ClInclude Include="..\src\external\glad.hpp">
       <Filter>External</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shaders.hpp" />
+    <ClInclude Include="..\src\opengl.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\resources\shaders\default.frag">

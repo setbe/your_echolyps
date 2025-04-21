@@ -28,16 +28,16 @@ namespace hi {
             AndroidNDK,
         };
 
-        constexpr Backend get_window_backend() {
-#if defined(__linux__)
+        consteval Backend get_window_backend() {
+#if defined(__linux__)                 // Linux
             return Backend::X11
-#elif defined(_WIN32)
+#elif defined(_WIN32)                  // Windows
             return Backend::WindowsAPI;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__)               // Apple
             return Backend::Cocoa;
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__)             // Android
             return Backend::AndroidNDK;
-#else
+#else                                  // Unknown
             return Backend::Unknown;
 #endif
         }
@@ -46,15 +46,17 @@ namespace hi {
         struct Selector;
 
         template<> struct Selector<Backend::WindowsAPI> {
-            using Handler = void*;
+            using Handler = void*; // hWnd
+            using DeviceContext = void*; // hDc
         };
 
         using Handler = Selector<get_window_backend()>::Handler;
-    } // namespace internal
+        using GraphicsContext = Selector<get_window_backend()>::DeviceContext;
+    } // namespace window
 
     // ===== Callback stuff =====
     struct Callback;
-    
+
     namespace internal {
         inline void noop(const Callback&) noexcept {}
         inline void noop_int(const Callback&, int) noexcept {}
@@ -67,21 +69,18 @@ namespace hi {
 
     struct Callback {
         inline Callback(void* user_data) noexcept
-            : user_data { user_data },
-            update{ internal::noop },
+            : 
+            user_data{ user_data },
             resize{ internal::noop_int_int },
             mouse_move{ internal::noop_int_int },
             key_up{ internal::noop_int },
-            key_down{ internal::noop_int },
             focus_gained{ internal::noop },
             focus_lost{ internal::noop }
         { }
 
-        internal::VoidCallback update;
         internal::VoidCallbackIntInt resize;
         internal::VoidCallbackIntInt mouse_move;
         internal::VoidCallbackInt key_up;
-        internal::VoidCallbackInt key_down;
         internal::VoidCallback focus_gained;
         internal::VoidCallback focus_lost;
 
@@ -95,17 +94,17 @@ namespace hi {
     }; // struct Callback
 
     // Key states (pressed — true, otherwise — false)
-    extern unsigned char key[256];
+    extern unsigned key[256];
 
-    enum class StageError : unsigned char {
-        Opengl,
+    enum class Stage : unsigned {
         CreateWindow,
+        Opengl,
 
         __Count__,
-        __Max__ = 99
-    }; // !StageError
+        __Max__ = 100
+    }; // !Stage
 
-    enum class Error : unsigned char {
+    enum class Error : unsigned {
         None,
         InternalMemoryAlloc,
 
@@ -115,17 +114,21 @@ namespace hi {
         SetDummyPixelFormat,
         NotSupportedRequiredWglExtensions,
         ModernOpenglContext,
+        EnableVSync,
 
         CreateWindowClassname,
         CreateWindow,
         LoadOpenglFunctions,
 
+        CompileShader,
+        CreateShaderProgram,
+
         __Count__,
-        __Max__ = 99
+        __Max__ = 100
     }; // !Error
 
     struct Result {
-        StageError stage_error;
-        Error error_code;
+        Stage stage;
+        Error error;
     };
 } // namespace hi
