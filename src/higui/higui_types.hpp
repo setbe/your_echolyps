@@ -17,118 +17,112 @@ extern "C" const int _fltused;
 #include "../external/glad.hpp"
 
 namespace hi {
-    // ===== Window stuff =====
-    namespace window {
-        // ===== Contains all info related to window backend =====
-        enum class Backend {
-            Unknown,
-            X11,
-            WindowsAPI,
-            Cocoa,
-            AndroidNDK,
-        };
+// ===== Window stuff =====
+namespace window {
+// ===== Contains all info related to window backend =====
+enum class Backend {
+    Unknown,
+    X11,
+    WindowsAPI,
+    Cocoa,
+    AndroidNDK,
+};
 
-        consteval Backend get_window_backend() {
-#if defined(__linux__)                 // Linux
-            return Backend::X11
-#elif defined(_WIN32)                  // Windows
-            return Backend::WindowsAPI;
-#elif defined(__APPLE__)               // Apple
-            return Backend::Cocoa;
-#elif defined(__ANDROID__)             // Android
-            return Backend::AndroidNDK;
-#else                                  // Unknown
-            return Backend::Unknown;
+consteval Backend get_window_backend() {
+#if defined(__linux__) // Linux
+    return Backend::X11;
+#elif defined(_WIN32)      // Windows
+    return Backend::WindowsAPI;
+#elif defined(__APPLE__)   // Apple
+    return Backend::Cocoa;
+#elif defined(__ANDROID__) // Android
+    return Backend::AndroidNDK;
+#else                      // Unknown
+    return Backend::Unknown;
 #endif
-        }
+}
 
-        template<Backend backend>
-        struct Selector;
+template <Backend backend> struct Selector;
 
-        template<> struct Selector<Backend::WindowsAPI> {
-            using Handler = void*; // hWnd
-            using DeviceContext = void*; // hDc
-        };
+template <> struct Selector<Backend::X11> {
+    using Handler = unsigned int; // Window
+    using DeviceContext = void *; // Display*
+};
 
-        using Handler = Selector<get_window_backend()>::Handler;
-        using GraphicsContext = Selector<get_window_backend()>::DeviceContext;
-    } // namespace window
+template <> struct Selector<Backend::WindowsAPI> {
+    using Handler = void *;       // hWnd
+    using DeviceContext = void *; // hDc
+};
 
-    // ===== Callback stuff =====
-    struct Callback;
+using Handler = Selector<get_window_backend()>::Handler;
+using GraphicsContext = Selector<get_window_backend()>::DeviceContext;
+} // namespace window
 
-    namespace internal {
-        inline void noop(const Callback&) noexcept {}
-        inline void noop_int(const Callback&, int) noexcept {}
-        inline void noop_int_int(const Callback&, int, int) noexcept {}
+// ===== Callback stuff =====
+struct Callback;
 
-        using VoidCallback = void (*)(const Callback&);
-        using VoidCallbackInt = void (*)(const Callback&, int);
-        using VoidCallbackIntInt = void (*)(const Callback&, int, int);
-    } // namespace internal
+namespace internal {} // namespace internal
 
-    struct Callback {
-        inline Callback(void* user_data) noexcept
-            : 
-            user_data{ user_data },
-            resize{ internal::noop_int_int },
-            mouse_move{ internal::noop_int_int },
-            key_up{ internal::noop_int },
-            focus_gained{ internal::noop },
-            focus_lost{ internal::noop }
-        { }
+struct Callback {
+    using Void = void (*)(const Callback &);
+    using VoidInt = void (*)(const Callback &, int);
+    using VoidIntInt = void (*)(const Callback &, int, int);
 
-        internal::VoidCallbackIntInt resize;
-        internal::VoidCallbackIntInt mouse_move;
-        internal::VoidCallbackInt key_up;
-        internal::VoidCallback focus_gained;
-        internal::VoidCallback focus_lost;
+    inline Callback(void *user_data, VoidIntInt resize, VoidIntInt mouse_move,
+                    VoidInt key_up, Void focus_gained, Void focus_lost) noexcept
+        : user_data{user_data}, resize{resize}, mouse_move{mouse_move},
+          key_up{key_up}, focus_gained{focus_gained}, focus_lost{focus_lost} {}
 
-        template <typename T>
-        inline T* get_user_data() const noexcept {
-            return reinterpret_cast<T*>(user_data);
-        }
+    VoidIntInt resize;
+    VoidIntInt mouse_move;
+    VoidInt key_up;
+    Void focus_gained;
+    Void focus_lost;
 
-    private:
-        void* user_data;
-    }; // struct Callback
+    template <typename T> inline const T *get_user_data() const noexcept {
+        return reinterpret_cast<T *>(user_data);
+    }
 
-    // Key states (pressed — true, otherwise — false)
-    extern unsigned key[256];
+  private:
+    void *user_data;
+}; // struct Callback
 
-    enum class Stage : unsigned {
-        CreateWindow,
-        Opengl,
+// Key states (pressed ï¿½ true, otherwise ï¿½ false)
+extern unsigned key[256];
 
-        __Count__,
-        __Max__ = 100
-    }; // !Stage
+enum class Stage : unsigned {
+    CreateWindow,
+    Opengl,
 
-    enum class Error : unsigned {
-        None,
-        InternalMemoryAlloc,
+    __Count__,
+    __Max__ = 100
+}; // !Stage
 
-        CreateDummyWindowClassname,
-        CreateDummyWindow,
+enum class Error : unsigned {
+    None,
+    InternalMemoryAlloc,
 
-        SetDummyPixelFormat,
-        NotSupportedRequiredWglExtensions,
-        ModernOpenglContext,
-        EnableVSync,
+    CreateDummyWindowClassname,
+    CreateDummyWindow,
 
-        CreateWindowClassname,
-        CreateWindow,
-        LoadOpenglFunctions,
+    SetDummyPixelFormat,
+    NotSupportedRequiredWglExtensions,
+    ModernOpenglContext,
+    EnableVSync,
 
-        CompileShader,
-        CreateShaderProgram,
+    CreateWindowClassname,
+    CreateWindow,
+    LoadOpenglFunctions,
 
-        __Count__,
-        __Max__ = 100
-    }; // !Error
+    CompileShader,
+    CreateShaderProgram,
 
-    struct Result {
-        Stage stage;
-        Error error;
-    };
+    __Count__,
+    __Max__ = 100
+}; // !Error
+
+struct Result {
+    Stage stage;
+    Error error;
+};
 } // namespace hi
