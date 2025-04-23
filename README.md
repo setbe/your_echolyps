@@ -27,6 +27,32 @@ cd your_echolyps
 
 ## 🐧 Linux
 
+### Install dependencies
+**Debian / Ubuntu / Linux Mint**
+```sh
+sudo apt install libx11-dev libgl-dev
+```
+
+**Arch Linux / Manjaro**
+```sh
+sudo pacman -S libx11 mesa
+```
+
+**Fedora / RHEL / CentOS (dnf)**
+```sh
+sudo dnf install libX11-devel mesa-libGL-devel
+```
+
+**openSUSE (zypper)**
+```sh
+sudo zypper install libX11-devel Mesa-libGL-devel
+```
+
+**Alpine Linux**
+```sh
+sudo apk add libx11-dev mesa-dev
+```
+
 ### 🎨 Generate Shaders
 ```sh
 cd resources/shaders

@@ -1,9 +1,24 @@
 CXX = g++
 DEBUG_CXXFLAGS   = -std=c++20 -O0 -g
-RELEASE_CXXFLAGS = -std=c++20 -O3 -DNDEBUG -ffreestanding -nostdlib -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -march=native
+RELEASE_CXXFLAGS = \
+  -std=c++20 -O3 -DNDEBUG \
+  -ffreestanding -fomit-frame-pointer \
+  -fno-exceptions -fno-use-cxa-atexit \
+  -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
+  -march=native \
+  -nostdlib \
+  -fno-ident
 
 DEBUG_LDFLAGS   = -lX11 -lGL -ldl
-RELEASE_LDFLAGS = -flto -nostdlib -Wl,-e,_start -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -lX11 -lGL
+RELEASE_LDFLAGS = \
+  -nostdlib \
+  -Wl,-e,_start \
+  -Wl,--gc-sections \
+  -Wl,-s \
+  -Wl,-z,norelro \
+  -Wl,-Bdynamic \
+  -lX11 -lGL -ldl
+
 
 SRC_DIR = src
 BUILD_DIR = build
