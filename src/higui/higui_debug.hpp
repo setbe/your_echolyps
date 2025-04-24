@@ -3,14 +3,14 @@
 #include "higui_platform.hpp"
 #include "higui_types.hpp"
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(HI_PUBLIC)
 
 #include <stdio.h>
 
 namespace hi::debug {}
 
-#else // #ifndef NDEBUG
+#else // !defined(NDEBUG) || defined(HI_PUBLIC)
 
 #define printf(...)
 
-#endif // #ifndef NDEBUG
+#endif // !defined(NDEBUG) || defined(HI_PUBLIC)

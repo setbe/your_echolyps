@@ -8,8 +8,6 @@
 
 #include "shaders.hpp"
 
-#include <math.h>
-
 namespace hi {
 struct Opengl {
   private:

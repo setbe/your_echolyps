@@ -5,37 +5,13 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#if defined(__linux__) && defined(NDEBUG)
-extern int main();
-extern "C" __attribute__((used, noinline, optimize("O0"))) void _start() {
-    int code = main();
-    asm volatile("mov %0, %%rdi\n\t"
-                 "mov $60, %%rax\n\t"
-                 "syscall"
-                 :
-                 : "r"((long)code)
-                 : "%rax", "%rdi");
-}
-#endif
-
-extern "C" long sys(long n, long a = 0, long b = 0, long c = 0, long d = 0,
-                    long e = 0, long f = 0) {
-    long ret;
-    asm volatile("movq %1, %%rax\n\t"
-                 "movq %2, %%rdi\n\t"
-                 "movq %3, %%rsi\n\t"
-                 "movq %4, %%rdx\n\t"
-                 "movq %5, %%r10\n\t"
-                 "movq %6, %%r8\n\t"
-                 "movq %7, %%r9\n\t"
-                 "syscall\n\t"
-                 : "=a"(ret)
-                 : "r"(n), "r"(a), "r"(b), "r"(c), "r"(d), "r"(e), "r"(f)
-                 : "rcx", "r11", "memory");
-    return ret;
-}
+#include <string.h>
+#include <sys/mman.h>
+#include <time.h>
+#include <unistd.h>
 
 namespace hi {
+
 unsigned key[256] = {0};
 
 void trim_working_set() noexcept {
@@ -43,40 +19,24 @@ void trim_working_set() noexcept {
 }
 
 void *alloc(unsigned size) noexcept {
-    constexpr long sys_mmap = 9;
-    // PROT_READ|PROT_WRITE = 1|2 = 3, MAP_PRIVATE|MAP_ANONYMOUS = 2|32 = 34
-    return (void *)sys(sys_mmap, 0UL, size, 3, 34, -1, 0UL);
+    return mmap(nullptr, size, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 }
 
-void free(void *ptr, unsigned size) noexcept {
-    constexpr long sys_munmap = 11;
-    sys(sys_munmap, (long)ptr, size);
-}
+void free(void *ptr, unsigned size) noexcept { munmap(ptr, size); }
 
-int exit(int code) noexcept { return 0; }
+int exit(int code) noexcept { _exit(code); }
 
 static void write_err(const char *s) noexcept {
     if (!s)
         return;
-    constexpr long stderr_fileno = 2;
-    const char *p = s;
-    while (*p)
-        ++p;
-    long len = p - s;
-
-    while (len > 0) {
-        long written = sys(1 /* write */, stderr_fileno, (long)s, len);
-        if (written <= 0)
-            break;
-        s += written;
-        len -= written;
-    }
+    write(STDERR_FILENO, s, strlen(s));
 }
 
 void panic_notify(Error /*error*/, const char *msg) noexcept {
     write_err(msg);
     write_err("\n");
-    asm volatile("ud2"); // crash here
+    __builtin_trap(); // ud2 еквівалент у glibc/clang/gcc
 }
 
 void panic(Result result) noexcept {
@@ -94,19 +54,15 @@ void panic(Result result) noexcept {
 }
 
 void sleep(unsigned ms) noexcept {
-    constexpr long sys_nanosleep = 35;
     struct timespec req = {ms / 1000, (long)(ms % 1000) * 1000000};
-    sys(sys_nanosleep, (long)&req, 0);
+    nanosleep(&req, nullptr);
 }
 
 // returns seconds
 double time() noexcept {
-    timespec ts;
-    constexpr long clock_monotonic = 1;
-    constexpr long sys_clock_gettime = 228;
-    long res = sys(sys_clock_gettime, clock_monotonic, (long)&ts);
-    if (res < 0)
-        hi::panic(Result{Stage::LinuxSyscall, Error::SyscallGetTime});
+    timespec ts{};
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0)
+        return 0.0;
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 } // namespace hi

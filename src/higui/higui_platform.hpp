@@ -30,6 +30,7 @@ void free(void *ptr, unsigned size) noexcept;
 int exit(int) noexcept;
 
 void panic(Result) noexcept;
+
 void panic_notify(Error, const char *msg) noexcept;
 void sleep(unsigned ms) noexcept;
 
