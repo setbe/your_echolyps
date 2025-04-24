@@ -566,6 +566,7 @@
     <ClCompile Include="..\src\external\glad.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\higui\higui_windows.cpp" />
+    <ClCompile Include="..\src\opengl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\engine.hpp" />
