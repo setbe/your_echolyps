@@ -42,11 +42,11 @@ struct Engine {
 
     void draw() const noexcept;
 
-    void framebuffer_resize(const Callback &callback, int width,
-                            int height) const noexcept {
+    inline void framebuffer_resize(const Callback &callback, int width,
+                                   int height) const noexcept {
         opengl.framebuffer_resize(callback, width, height);
         this->draw();
-        hi::sleep(7); // hack
+        hi::sleep(20); // hack
     }
 
     static void framebuffer_resize_adapter(const Callback &cb, int w,

@@ -6,8 +6,8 @@ void hi::Engine::draw() const noexcept {
     glUseProgram(opengl.get_shader_program());
     glUniform3f(opengl.get_location_color(), 0.0f, opengl.get_green_value(),
                 0.0f);
-    this->opengl.draw();
-    this->surface.swap_buffers();
+    opengl.draw();
+    surface.swap_buffers();
 }
 
 int main() {
@@ -22,12 +22,6 @@ int main() {
     while (engine.surface.poll_events()) {
         engine.draw();
         engine.opengl.update_green_value();
-        g_start_time = hi::time();
-        if (g_start_time > current_time) {
-            current_time += 0.25f;
-            printf("time (secs): %f, gren_value: %f\n", g_start_time,
-                   engine.opengl.get_green_value());
-        }
     }
     g_start_time = hi::time();
     printf("time exit: %f\n", g_start_time);
