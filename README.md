@@ -53,8 +53,7 @@ sudo apk add libx11-dev mesa-dev
 
 ### Shaders
 ```sh
-make shaders
-make shaders-run
+make shaders && make shaders-run
 ```
 Expected output:
 ```
@@ -65,8 +64,7 @@ Generated "/home/.../your_echolyps/src/shaders.hpp"
 
 ### Compile
 ```sh
-make clean
-make release
+make clean && make release
 ```
 
 Output binary: `build/echolyps`
@@ -82,6 +80,11 @@ Output binary: `build/echolyps`
   ```sh
   make
   ```
+
+  Create public release binary:
+  ```sh
+  make clean && make public
+  ``` 
 
 ---
 
