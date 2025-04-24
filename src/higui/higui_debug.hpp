@@ -8,4 +8,9 @@
 #include <stdio.h>
 
 namespace hi::debug {}
-#endif
+
+#else // #ifndef NDEBUG
+
+#define printf(...)
+
+#endif // #ifndef NDEBUG

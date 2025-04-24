@@ -1,4 +1,4 @@
-// Original (not modified) lib may be found here
+// Original (NOT modified one) lib may be found here
 // <https://github.com/datenwolf/linmath.h>
 #ifndef LINMATH_H
 #define LINMATH_H
@@ -9,6 +9,7 @@
 #define LINMATH_H_FUNC static inline
 #endif
 
+// Comment these if you wish to use std
 #define LINMATH_NO_STRING_LIB
 #define LINMATH_NO_MATH_LIB
 
@@ -19,22 +20,55 @@
 #ifndef LINMATH_NO_MATH_LIB
 #include <math.h>
 #else
-// sin(x) ~= x - x^3/6 + x^5/120 for small x
-static inline float hi_sinf(float x) {
-    const float x2 = x * x;
-    return x * (1 - x2 / 6.0f + x2 * x2 / 120.0f);
+
+static constexpr float HI_PI = 3.14159265359f;
+static constexpr float HI_PI_2 = 1.57079632679f;
+static constexpr float HI_PI2 = 6.28318530718f;
+
+static inline float fmodf_2pi(float x) noexcept {
+    while (x >= HI_PI2)
+        x -= HI_PI2;
+    while (x < 0.0f)
+        x += HI_PI2;
+    return x;
 }
 
-// cos(x) ~= 1 - x^2/2 + x^4/24
-static inline float hi_cosf(float x) {
+static inline float hi_sinf(float x) noexcept {
+    // x to [0, 2π)
+    while (x >= HI_PI2)
+        x -= HI_PI2;
+    while (x < 0.0f)
+        x += HI_PI2;
+
+    // [−π/2, π/2]
+    bool flip = false;
+    if (x > HI_PI) {
+        x -= HI_PI;
+        flip = true;
+    }
+    if (x > HI_PI_2)
+        x = HI_PI - x;
+
+    // [−π/2, π/2]
     const float x2 = x * x;
-    return 1 - x2 / 2.0f + x2 * x2 / 24.0f;
+    float result = x * (1.0f - x2 / 6.0f + (x2 * x2) / 120.0f);
+
+    return flip ? -result : result;
 }
 
-// tan(x) ~= x + x^3/3 for small x
-static inline float hi_tanf(float x) {
+static inline float hi_cosf(float x) noexcept { return hi_sinf(x + HI_PI_2); }
+
+static inline float hi_tanf(float x) noexcept {
+    // [−π, π)
+    while (x > HI_PI)
+        x -= HI_PI2;
+    while (x < -HI_PI)
+        x += HI_PI2;
+
+    // tan(x) ≈ x + x^3/3 + 2x^5/15 + 17x^7/315
     const float x2 = x * x;
-    return x + x * x2 / 3.0f;
+    return x +
+           x * x2 * (1.0f / 3.0f + x2 * (2.0f / 15.0f + x2 * (17.0f / 315.0f)));
 }
 
 static inline float hi_sqrtf(float x) {
@@ -42,16 +76,14 @@ static inline float hi_sqrtf(float x) {
         return 0.0f;
     float xhalf = 0.5f * x;
     int i = *(int *)&x;        // reinterpret as int
-    i = 0x5f3759df - (i >> 1); // initial guess
+    i = 0x5f3759df - (i >> 1); // magic number
     float y = *(float *)&i;
     y = y * (1.5f - xhalf * y * y); // 1st Newton-Raphson iteration
     return x * y;
 }
 #endif // LINMATH_NO_MATH_LIB
 
-consteval float radians(float degrees) {
-    return degrees * 3.14159265358979f / 180.0f;
-}
+consteval float radians(float degrees) { return degrees * HI_PI / 180.0f; }
 
 #ifdef __cplusplus
 extern "C" {

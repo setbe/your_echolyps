@@ -14,8 +14,10 @@ typedef char *LPSTR;
 #endif
 
 #include "higui_types.hpp"
+#include <assert.h>
 
 namespace hi {
+
 void trim_working_set() noexcept;
 
 // Allocate OS memory, use `hi::free(ptr, size)`
@@ -30,6 +32,9 @@ int exit(int) noexcept;
 void panic(Result) noexcept;
 void panic_notify(Error, const char *msg) noexcept;
 void sleep(unsigned ms) noexcept;
+
+// returns seconds
+double time() noexcept;
 
 // ===== Contains all info related to crossplatform window management =====
 namespace window {

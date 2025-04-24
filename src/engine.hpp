@@ -33,7 +33,7 @@ struct Engine {
         callback.resize = framebuffer_resize_adapter;
         callback.focus_lost = focus_lost;
     }
-    inline ~Engine() noexcept {}
+    inline ~Engine() noexcept { /* RAII */ }
 
     Engine(const Engine &) = delete;
     Engine &operator=(const Engine &) = delete;

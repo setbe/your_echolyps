@@ -1,12 +1,10 @@
 # Build & Development Guide
 
-## 🔧 Build Instructions
-
-### 📦 Clone the Repository (3 Ways)
+### Clone the Repository (3 Ways)
 
 1. **Without Terminal**  
    Download `.zip` from the GitHub page.  
-   > Tip: `cd` means "Change Directory". `cd ../..` means go up two directories.
+   > Tip: `cd` means "Change Directory (Folder)". `cd ../..` means go up two directories.
 
 2. **Using Git**
 ```sh
@@ -53,51 +51,48 @@ sudo zypper install libX11-devel Mesa-libGL-devel
 sudo apk add libx11-dev mesa-dev
 ```
 
-### 🎨 Generate Shaders
+### Shaders
 ```sh
-cd resources/shaders
-make run
+make shaders
+make shaders-run
 ```
 Expected output:
 ```
+...
 Generated "/home/.../your_echolyps/src/shaders.hpp"
+...
 ```
 
-### 🛠 Compile the Game
+### Compile
 ```sh
-cd ../..
+make clean
 make release
 ```
 
 Output binary: `build/echolyps`
 
-### ▶️ Run the Game
+### Run
 ```sh
 ./build/echolyps
 ```
 
 ### 🧪 Developer Utilities
 
-- Clean build:
+- (debug) Clean + Build + Run:
   ```sh
-  make clean
-  ```
-
-- Build + Run debug:
-  ```sh
-  make run
+  make
   ```
 
 ---
 
 ## 🪟 Windows
 
-### 💼 Visual Studio Setup
+### Visual Studio Setup
 
 Ensure you've cloned the repo.  
 [Download Visual Studio](https://visualstudio.microsoft.com/downloads/) with C/C++ support.
 
-### 🎨 Generate Shaders
+### Shaders
 
 ```sh
 cd your_echolyps/resources/shaders/vs
@@ -113,7 +108,7 @@ Expected output:
 Generated "/.../your_echolyps/src/shaders.hpp"
 ```
 
-### 🛠 Compile the Game
+### Compile
 
 1. Open `your_echolyps/vs/echolyps.sln` in Visual Studio  
 2. Set configuration:
@@ -125,7 +120,7 @@ Output: `your_echolyps/vs/build/echolyps.exe`
 
 ---
 
-## 📦 Portability
+## Facts
 
 The compiled game is fully portable.  
 All external libraries can be modified by the project.

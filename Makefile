@@ -1,3 +1,5 @@
+.PHONY: all shaders shaders-run clean-run clean run release
+
 CXX = g++
 DEBUG_CXXFLAGS   = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
@@ -19,13 +21,23 @@ RELEASE_LDFLAGS = \
   -Wl,-Bdynamic \
   -lX11 -lGL -ldl
 
-
 SRC_DIR = src
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/echolyps
 
 SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
+
+default: shaders shaders-run clean-run run
+
+shaders:
+	cd resources/shaders/ && make clean
+
+shaders-run:
+	cd resources/shaders/ && make run
+
+clean-run:
+	$(MAKE) clean
 
 all: CXXFLAGS = $(DEBUG_CXXFLAGS)
 all: LDFLAGS = $(DEBUG_LDFLAGS)

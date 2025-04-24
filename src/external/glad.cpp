@@ -701,12 +701,12 @@ static void load_GL_VERSION_2_0(GLADloadproc load) {
     glad_glGetProgramInfoLog =
         (PFNGLGETPROGRAMINFOLOGPROC)load("glGetProgramInfoLog");
     glad_glGetShaderiv = (PFNGLGETSHADERIVPROC)load("glGetShaderiv");
-    // glad_glGetShaderInfoLog =
-    // (PFNGLGETSHADERINFOLOGPROC)load("glGetShaderInfoLog");
+    glad_glGetShaderInfoLog =
+        (PFNGLGETSHADERINFOLOGPROC)load("glGetShaderInfoLog");
     // glad_glGetShaderSource =
     // (PFNGLGETSHADERSOURCEPROC)load("glGetShaderSource");
-    // glad_glGetUniformLocation =
-    // (PFNGLGETUNIFORMLOCATIONPROC)load("glGetUniformLocation");
+    glad_glGetUniformLocation =
+        (PFNGLGETUNIFORMLOCATIONPROC)load("glGetUniformLocation");
     // glad_glGetUniformfv = (PFNGLGETUNIFORMFVPROC)load("glGetUniformfv");
     // glad_glGetUniformiv = (PFNGLGETUNIFORMIVPROC)load("glGetUniformiv");
     // glad_glGetVertexAttribdv =
@@ -722,14 +722,14 @@ static void load_GL_VERSION_2_0(GLADloadproc load) {
     glad_glLinkProgram = (PFNGLLINKPROGRAMPROC)load("glLinkProgram");
     glad_glShaderSource = (PFNGLSHADERSOURCEPROC)load("glShaderSource");
     glad_glUseProgram = (PFNGLUSEPROGRAMPROC)load("glUseProgram");
-    // glad_glUniform1f = (PFNGLUNIFORM1FPROC)load("glUniform1f");
-    // glad_glUniform2f = (PFNGLUNIFORM2FPROC)load("glUniform2f");
-    // glad_glUniform3f = (PFNGLUNIFORM3FPROC)load("glUniform3f");
-    // glad_glUniform4f = (PFNGLUNIFORM4FPROC)load("glUniform4f");
-    // glad_glUniform1i = (PFNGLUNIFORM1IPROC)load("glUniform1i");
-    // glad_glUniform2i = (PFNGLUNIFORM2IPROC)load("glUniform2i");
-    // glad_glUniform3i = (PFNGLUNIFORM3IPROC)load("glUniform3i");
-    // glad_glUniform4i = (PFNGLUNIFORM4IPROC)load("glUniform4i");
+    glad_glUniform1f = (PFNGLUNIFORM1FPROC)load("glUniform1f");
+    glad_glUniform2f = (PFNGLUNIFORM2FPROC)load("glUniform2f");
+    glad_glUniform3f = (PFNGLUNIFORM3FPROC)load("glUniform3f");
+    glad_glUniform4f = (PFNGLUNIFORM4FPROC)load("glUniform4f");
+    glad_glUniform1i = (PFNGLUNIFORM1IPROC)load("glUniform1i");
+    glad_glUniform2i = (PFNGLUNIFORM2IPROC)load("glUniform2i");
+    glad_glUniform3i = (PFNGLUNIFORM3IPROC)load("glUniform3i");
+    glad_glUniform4i = (PFNGLUNIFORM4IPROC)load("glUniform4i");
     // glad_glUniform1fv = (PFNGLUNIFORM1FVPROC)load("glUniform1fv");
     // glad_glUniform2fv = (PFNGLUNIFORM2FVPROC)load("glUniform2fv");
     // glad_glUniform3fv = (PFNGLUNIFORM3FVPROC)load("glUniform3fv");

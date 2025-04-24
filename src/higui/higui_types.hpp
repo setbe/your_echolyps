@@ -93,6 +93,7 @@ extern unsigned key[256];
 enum class Stage : unsigned {
     CreateWindow,
     Opengl,
+    LinuxSyscall,
 
     __Count__,
     __Max__ = 100
@@ -110,12 +111,15 @@ enum class Error : unsigned {
     ModernOpenglContext,
     EnableVSync,
 
+    OpenDisplay,
     CreateWindowClassname,
     CreateWindow,
     LoadOpenglFunctions,
 
     CompileShader,
     CreateShaderProgram,
+
+    SyscallGetTime,
 
     __Count__,
     __Max__ = 100
