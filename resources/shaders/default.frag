@@ -1,9 +1,13 @@
-#version 450
+#version 330 core
+out vec4 FragColor;
+  
+in vec3 ourColor;
+in vec2 TexCoord;
 
-layout (location = 0) in vec3 fragColor;
+uniform sampler2D textAtlas;
 
-layout (location = 0) out vec4 outColor;
-
-void main() {
-    outColor = vec4(fragColor, 1.0);
+void main()
+{
+    float value = texture(textAtlas, TexCoord).r;
+    FragColor = vec4(1.0, 0.0, 0.0, value);
 }

@@ -1,9 +1,12 @@
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
+#include "external/stb_truetype.h"
 
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -12,10 +15,11 @@ namespace fs = std::filesystem;
 
 std::string output_directory = "../../src";
 std::string output_filename = "fonts.hpp";
+bool flip_vertical = true;
 
-const int GLYPH_SIZE = 32;
-const int ATLAS_WIDTH = 512;
-const int ATLAS_HEIGHT = 512;
+const int GLYPH_SIZE = 24;
+const int PADDING = 1;
+const int MAX_ATLAS_SIZE = 2048;
 
 struct CodepointRange {
     int begin;
@@ -24,153 +28,192 @@ struct CodepointRange {
 
 const std::vector<CodepointRange> ranges_en = {{0x20, 0x7E}};
 const std::vector<CodepointRange> ranges_ua = {{0x0400, 0x04FF}};
-const std::vector<CodepointRange> ranges_ja = {
+const std::vector<CodepointRange> ranges_jp = {
     {0x3040, 0x309F}, {0x30A0, 0x30FF}, {0x4E00, 0x9FAF}};
 
-std::vector<int> collect_codepoints(const std::set<std::string> &langs) {
+std::vector<int> get_codepoints(const std::string &lang) {
     std::vector<int> cps;
-    auto append_range = [&](const auto &ranges) {
-        for (auto r : ranges)
-            for (int c = r.begin; c <= r.end; ++c)
-                cps.push_back(c);
-    };
-    if (langs.contains("en"))
-        append_range(ranges_en);
-    if (langs.contains("ua"))
-        append_range(ranges_ua);
-    if (langs.contains("ja"))
-        append_range(ranges_ja);
+    const auto &ranges = (lang == "en")   ? ranges_en
+                         : (lang == "ua") ? ranges_ua
+                                          : ranges_jp;
+    for (auto r : ranges)
+        for (int c = r.begin; c <= r.end; ++c)
+            cps.push_back(c);
     return cps;
 }
 
-int main(int argc, char **argv) {
+struct GlyphSource {
     std::string font_path;
-    std::set<std::string> langs;
+    stbtt_fontinfo font;
+    std::vector<unsigned char> buffer;
+};
+
+int main(int argc, char **argv) {
+    struct FontLang {
+        std::string path;
+        std::string lang;
+    };
+    std::vector<FontLang> font_inputs;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "-f" && i + 1 < argc) {
-            font_path = argv[++i];
-            if (!font_path.ends_with(".ttf"))
-                font_path += ".ttf";
-        } else if (arg.starts_with("--languages-")) {
-            std::string langs_arg = arg.substr(12);
-            size_t pos = 0;
-            while ((pos = langs_arg.find('-')) != std::string::npos) {
-                langs.insert(langs_arg.substr(0, 2));
-                langs_arg = langs_arg.substr(pos + 1);
+        if (arg.starts_with("--")) {
+            size_t sep = arg.find_last_of('-');
+            if (sep != std::string::npos) {
+                std::string path = arg.substr(2, sep - 2);
+                std::string lang = arg.substr(sep + 1);
+                font_inputs.push_back({path, lang});
             }
-            if (!langs_arg.empty())
-                langs.insert(langs_arg.substr(0, 2));
+        } else if (arg == "--flip-vertical") {
+            flip_vertical = true;
         }
     }
 
-    if (!langs.contains("en")) {
-        std::cerr << "Error: English (en) must be included.\n";
-        return 1;
-    }
+    std::vector<GlyphSource> glyph_sources_storage;
+    std::map<int, const GlyphSource *> glyph_sources;
+    std::set<std::string> langs;
 
-    if (font_path.empty()) {
-        std::vector<fs::path> ttf_files;
-        for (const auto &entry : fs::directory_iterator(".")) {
-            if (entry.is_regular_file() && entry.path().extension() == ".ttf") {
-                ttf_files.push_back(entry.path());
-            }
-        }
-        if (ttf_files.size() == 1) {
-            font_path = ttf_files[0].string();
-            std::cout << "[info] Using font: " << font_path << "\n";
-        } else {
-            std::cerr << "Error: specify font with -f or ensure only one .ttf "
-                         "file exists.\n";
+    for (const auto &entry : font_inputs) {
+        langs.insert(entry.lang);
+
+        std::ifstream font_file(entry.path, std::ios::binary);
+        if (!font_file) {
+            std::cerr << "Error: failed to open font file: " << entry.path
+                      << "\n";
             return 1;
         }
+
+        GlyphSource source;
+        source.font_path = entry.path;
+        source.buffer = std::vector<unsigned char>(
+            (std::istreambuf_iterator<char>(font_file)), {});
+        if (!stbtt_InitFont(&source.font, source.buffer.data(), 0)) {
+            std::cerr << "Error: failed to init font: " << entry.path << "\n";
+            return 1;
+        }
+
+        glyph_sources_storage.push_back(std::move(source));
+        GlyphSource *ptr = &glyph_sources_storage.back();
+        for (int cp : get_codepoints(entry.lang))
+            glyph_sources[cp] = ptr;
     }
 
-    std::ifstream font_file(font_path, std::ios::binary);
-    if (!font_file) {
-        std::cerr << "Error: failed to open font file." << std::endl;
-        return 1;
-    }
+    std::vector<int> codepoints;
+    for (const auto &[cp, _] : glyph_sources)
+        codepoints.push_back(cp);
 
-    std::vector<unsigned char> font_buffer(
-        (std::istreambuf_iterator<char>(font_file)), {});
-    stbtt_fontinfo font;
-    if (!stbtt_InitFont(&font, font_buffer.data(), 0)) {
-        std::cerr << "Error: failed to initialize font." << std::endl;
-        return 1;
-    }
+    std::sort(codepoints.begin(), codepoints.end());
 
-    std::vector<int> codepoints = collect_codepoints(langs);
-    unsigned char atlas[ATLAS_WIDTH * ATLAS_HEIGHT] = {};
+    for (int cp : codepoints)
+        std::cout << static_cast<char>(cp) << " ";
+
+    std::vector<unsigned char> atlas_bitmap;
     std::vector<std::string> glyph_entries;
+    bool success = false;
 
-    int x = 0, y = 0, max_row_height = 0;
-    for (int cp : codepoints) {
-        int w, h, xoff, yoff;
-        float scale = stbtt_ScaleForPixelHeight(&font, (float)GLYPH_SIZE);
-        unsigned char *bitmap =
-            stbtt_GetCodepointBitmap(&font, 0, scale, cp, &w, &h, &xoff, &yoff);
+    for (int size = 128; size <= MAX_ATLAS_SIZE; size *= 2) {
+        int atlas_width = size, atlas_height = size;
+        std::vector<unsigned char> test_bitmap(atlas_width * atlas_height, 0);
+        std::vector<std::string> test_glyphs;
 
-        if (x + w >= ATLAS_WIDTH) {
-            x = 0;
-            y += max_row_height;
-            max_row_height = 0;
-        }
-        if (y + h >= ATLAS_HEIGHT) {
-            std::cerr << "Error: Atlas overflow. Increase dimensions."
-                      << std::endl;
+        int x = 0, y = 0, max_row = 0;
+        bool fits = true;
+
+        std::cout << "[debug] rendering " << codepoints.size()
+                  << " glyphs into atlas " << atlas_width << "x" << atlas_height
+                  << "\n";
+
+        for (int cp : codepoints) {
+            if (!glyph_sources.contains(cp))
+                continue;
+            const auto *src = glyph_sources.at(cp);
+
+            float scale =
+                stbtt_ScaleForPixelHeight(&src->font, (float)GLYPH_SIZE);
+            int w, h, xoff, yoff;
+            unsigned char *bitmap = stbtt_GetCodepointBitmap(
+                &src->font, 0, scale, cp, &w, &h, &xoff, &yoff);
+
+            if (x + w + PADDING > atlas_width) {
+                x = 0;
+                y += max_row + PADDING;
+                max_row = 0;
+            }
+            if (y + h + PADDING > atlas_height) {
+                fits = false;
+                stbtt_FreeBitmap(bitmap, nullptr);
+                break;
+            }
+
+            for (int j = 0; j < h; ++j) {
+                for (int i = 0; i < w; ++i) {
+                    int dest_y = flip_vertical ? (y + (h - 1 - j)) : (y + j);
+                    test_bitmap[dest_y * atlas_width + (x + i)] =
+                        bitmap[j * w + i];
+                }
+            }
+
+            scale = stbtt_ScaleForPixelHeight(&src->font, (float)GLYPH_SIZE);
+            int adv, lsb;
+            stbtt_GetCodepointHMetrics(&src->font, cp, &adv, &lsb);
+            int scaled_advance = std::round(adv * scale);
+
+            test_glyphs.push_back(
+                "    {" + std::to_string(x) + ", " + std::to_string(y) + ", " +
+                std::to_string(w) + ", " + std::to_string(h) + ", " +
+                std::to_string(scaled_advance) + ", " + // ⬅️ тут
+                std::to_string(xoff) + ", " + std::to_string(yoff) + ", " +
+                std::to_string(cp) + "},");
+
+            x += w + PADDING;
+            if (h > max_row)
+                max_row = h;
             stbtt_FreeBitmap(bitmap, nullptr);
-            return 1;
         }
 
-        for (int j = 0; j < h; ++j)
-            for (int i = 0; i < w; ++i)
-                atlas[(y + j) * ATLAS_WIDTH + (x + i)] = bitmap[j * w + i];
+        if (fits) {
+            atlas_bitmap = std::move(test_bitmap);
+            glyph_entries = std::move(test_glyphs);
 
-        int advance, lsb;
-        stbtt_GetCodepointHMetrics(&font, cp, &advance, &lsb);
+            fs::path out_path = fs::path(output_directory) / output_filename;
+            std::ofstream out(out_path);
 
-        glyph_entries.push_back(
-            "    {" + std::to_string(x) + ", " + std::to_string(y) + ", " +
-            std::to_string(w) + ", " + std::to_string(h) + ", " +
-            std::to_string(advance) + ", " + std::to_string(xoff) + ", " +
-            std::to_string(yoff) + ", " + std::to_string(cp) + "},");
+            out << "#pragma once\n\n";
+            out << "enum class FontLanguage { en, ua, jp };\n";
+            out << "constexpr FontLanguage supported_languages[] = { ";
+            for (const auto &lang : langs)
+                out << "FontLanguage::" << lang << ", ";
+            out << "};\n\n";
 
-        x += w + 1;
-        if (h > max_row_height)
-            max_row_height = h;
-        stbtt_FreeBitmap(bitmap, nullptr);
+            out << "constexpr int FONT_ATLAS_WIDTH = " << atlas_width << ";\n";
+            out << "constexpr int FONT_ATLAS_HEIGHT = " << atlas_height
+                << ";\n";
+            out << "constexpr unsigned char font_bitmap[FONT_ATLAS_WIDTH * "
+                   "FONT_ATLAS_HEIGHT] = {\n";
+            for (size_t i = 0; i < atlas_bitmap.size(); ++i)
+                out << (int)atlas_bitmap[i] << ((i % 32 == 31) ? ",\n" : ", ");
+            out << "};\n\n";
+
+            out << "struct GlyphInfo { int x, y, w, h, advance, offset_x, "
+                   "offset_y, codepoint; };\n";
+            out << "constexpr GlyphInfo font_glyphs[] = {\n";
+            for (const auto &entry : glyph_entries)
+                out << entry << "\n";
+            out << "};\n";
+
+            std::cout << "[info] Generated " << out_path << " with "
+                      << glyph_entries.size() << " glyphs in " << atlas_width
+                      << "x" << atlas_height << " atlas.\n";
+            success = true;
+            break;
+        }
     }
 
-    fs::path out_path = fs::path(output_directory) / output_filename;
-    std::ofstream out(out_path);
-
-    out << "#pragma once\n\n";
-    out << "enum class FontLanguage { en, ua, ja };\n";
-    out << "constexpr FontLanguage supported_languages[] = { ";
-    for (const auto &lang : langs) {
-        out << "FontLanguage::" << lang << ", ";
+    if (!success) {
+        std::cerr << "Error: Unable to fit glyphs in max atlas size."
+                  << std::endl;
+        return 1;
     }
-    out << "};\n\n";
 
-    out << "constexpr int FONT_ATLAS_WIDTH = " << ATLAS_WIDTH << ";\n";
-    out << "constexpr int FONT_ATLAS_HEIGHT = " << ATLAS_HEIGHT << ";\n";
-    out << "constexpr unsigned char font_bitmap["
-        << (ATLAS_WIDTH * ATLAS_HEIGHT) << "] = {\n";
-    for (int i = 0; i < ATLAS_WIDTH * ATLAS_HEIGHT; ++i) {
-        out << (int)atlas[i] << ((i % 32 == 31) ? ",\n" : ", ");
-    }
-    out << "};\n\n";
-
-    out << "struct GlyphInfo { int x, y, w, h, advance, offset_x, offset_y, "
-           "codepoint; };\n";
-    out << "constexpr GlyphInfo font_glyphs[] = {\n";
-    for (const auto &entry : glyph_entries)
-        out << entry << "\n";
-    out << "};\n";
-
-    std::cout << "[info] Generated " << out_path << " with "
-              << glyph_entries.size() << " glyphs.\n";
     return 0;
 }

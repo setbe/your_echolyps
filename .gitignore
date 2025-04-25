@@ -3,7 +3,13 @@
 /.vscode
 /vs/.vs
 /vs/build
+
 /src/shaders.hpp
 /resources/shaders/vs/.vs
 /resources/shaders/vs/.vscode
 /resources/shaders/vs/build
+
+/src/fonts.hpp
+/resources/fonts/vs/.vs
+/resources/fonts/vs/.vscode
+/resources/fonts/vs/build

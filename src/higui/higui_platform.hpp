@@ -68,7 +68,7 @@ void load_gl() noexcept;
 #ifdef _WIN32
 void create_class() noexcept;
 #else
-// No need for this. We create `window class` on Windows only
+// No need for this. We need create `window class` on Windows only
 #endif
 
 } // namespace window

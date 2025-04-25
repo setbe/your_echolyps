@@ -1,4 +1,4 @@
-.PHONY: all shaders shaders-run clean-run clean run release public
+.PHONY: all shaders clean run release public
 
 CXX = g++
 
@@ -30,16 +30,13 @@ TARGET = $(BUILD_DIR)/echolyps
 SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
-default: shaders shaders-run clean-run run
+default: shaders clean run
 
 shaders:
-	cd resources/shaders/ && make clean
-
-shaders-run:
-	cd resources/shaders/ && make run
-
-clean-run:
-	$(MAKE) clean
+	$(MAKE) -C resources/shaders
+  
+font:
+	cd resources/fonts/ && make
 
 all: CXXFLAGS = $(DEBUG_CXXFLAGS)
 all: LDFLAGS = $(DEBUG_LDFLAGS)

@@ -51,11 +51,11 @@ sudo zypper install libX11-devel Mesa-libGL-devel
 sudo apk add libx11-dev mesa-dev
 ```
 
-### Shaders
+### Resources
 ```sh
-make shaders && make shaders-run
+make res
 ```
-Expected output:
+Search for expected output:
 ```
 ...
 Generated "/home/.../your_echolyps/src/shaders.hpp"

@@ -3,24 +3,29 @@
 #include "external/glad.hpp"
 
 #include "higui/higui.hpp"
+#include "higui/higui_glyph.hpp"
 
 #include "opengl.hpp"
 
 using Handler = hi::window::Handler;
 
 namespace hi {
-struct Engine {
+struct Engine;
+}
+
+struct hi::Engine {
   private:
-    static inline void noop(const Callback &) noexcept {}
-    static inline void noop_int(const Callback &, int) noexcept {}
-    static inline void noop_int_int(const Callback &, int, int) noexcept {}
+    static inline void noop(const hi::Callback &) noexcept {}
+    static inline void noop_int(const hi::Callback &, int) noexcept {}
+    static inline void noop_int_int(const hi::Callback &, int, int) noexcept {}
 
   public:
-    Callback callback;
-    Surface surface;
-    Opengl opengl;
+    hi::Callback callback;
+    hi::Surface surface;
+    hi::Opengl opengl;
+    hi::TextRenderer text;
 
-    inline explicit Engine(int width, int height, const char *title) noexcept
+    inline explicit Engine(int width, int height) noexcept
         : callback{/* user_data */ this,
                    // -- Set noop functions ---
                    /* resize */ noop_int_int,
@@ -29,9 +34,10 @@ struct Engine {
                    /* focus_gained */ noop,
                    /* focus_lost */ noop},
           surface{&callback, width, height}, opengl{} {
-        surface.set_title(title);
+
         callback.resize = framebuffer_resize_adapter;
         callback.focus_lost = focus_lost;
+        start();
     }
     inline ~Engine() noexcept { /* RAII */ }
 
@@ -40,13 +46,14 @@ struct Engine {
     Engine(Engine &&) = delete;
     Engine &operator=(Engine &&) = delete;
 
+    void start() noexcept;
     void draw() const noexcept;
 
     inline void framebuffer_resize(const Callback &callback, int width,
                                    int height) const noexcept {
         opengl.framebuffer_resize(callback, width, height);
         this->draw();
-        hi::sleep(20); // hack
+        hi::sleep(7); // hack
     }
 
     static void framebuffer_resize_adapter(const Callback &cb, int w,
@@ -59,5 +66,3 @@ struct Engine {
         hi::trim_working_set();
     }
 };
-
-} // namespace hi

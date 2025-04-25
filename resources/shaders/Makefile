@@ -1,29 +1,30 @@
 CXX = g++
+
 DEBUG_CXXFLAGS = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
   -std=c++20 -O3 -DNDEBUG \
-  -flto -ffreestanding -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
-  -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
+  -flto \
   -march=native \
   -fno-ident
 
 PUBLIC_CXXFLAGS = \
   -std=c++20  -O2 -DNDEBUG -DHI_PUBLIC \
-  -flto -ffreestanding -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
-  -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
+  -flto \
   -mno-sse4 -mno-avx -mno-avx2 -mno-fma \
   -fno-ident
+
+DEBUG_LDFLAGS =
 RELEASE_LDFLAGS = -flto
 PUBLIC_LDFLAGS = -flto
-DEBUG_LDFLAGS =
+
 SRC_DIR = src
 BUILD_DIR = ../../build
 TARGET = $(BUILD_DIR)/shaders
 
 SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
+
+default: clean run
 
 # Fast build
 all: CXXFLAGS = $(DEBUG_CXXFLAGS)

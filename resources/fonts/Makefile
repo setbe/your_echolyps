@@ -1,27 +1,34 @@
-.PHONY: all shaders shaders-run clean-run clean run release public
+# ==== fonts ====
+
+FONT_EXO = Exo_2/static/Exo2-Regular.ttf
+FONT_NOTO_SANS_JP = Noto_Sans_JP/static/NotoSansJP-Regular.ttf
+FONT_TERMINUS = terminus-ttf-4.49.3/TerminusTTF-4.49.3.ttf
+
+# ==== fonts ====
+# ==== settings ====
+
+FONT_ARGS = --$(FONT_TERMINUS)-en
+
+# ==== settings ====
+
+.PHONY: all clean run release public
 
 CXX = g++
 
 DEBUG_CXXFLAGS = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
   -std=c++20 -O3 -DNDEBUG \
-  -ffreestanding -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
-  -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -march=native \
   -fno-ident
 
 PUBLIC_CXXFLAGS = \
   -std=c++20 -O2 -DNDEBUG -DHI_PUBLIC \
-  -ffreestanding -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
-  -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -mno-sse4 -mno-avx -mno-avx2 -mno-fma \
   -fno-ident
 
-DEBUG_LDFLAGS = -lX11 -lGL -ldl
-RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
-PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
+DEBUG_LDFLAGS =
+RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-Bdynamic
+PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-Bdynamic
 
 SRC_DIR = src
 BUILD_DIR = ../../build
@@ -30,16 +37,7 @@ TARGET = $(BUILD_DIR)/fonts
 SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
-default: shaders shaders-run clean-run run
-
-shaders:
-	cd resources/shaders/ && make clean
-
-shaders-run:
-	cd resources/shaders/ && make run
-
-clean-run:
-	$(MAKE) clean
+default: clean run
 
 all: CXXFLAGS = $(DEBUG_CXXFLAGS)
 all: LDFLAGS = $(DEBUG_LDFLAGS)
@@ -67,4 +65,4 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: all
-	./$(TARGET)
+	./$(TARGET) $(FONT_ARGS)
