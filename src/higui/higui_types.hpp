@@ -93,7 +93,7 @@ extern unsigned key[256];
 enum class Stage : unsigned {
     CreateWindow,
     Opengl,
-    LinuxSyscall,
+    Engine,
 
     __Count__,
     __Max__ = 100
@@ -102,6 +102,7 @@ enum class Stage : unsigned {
 enum class Error : unsigned {
     None,
     InternalMemoryAlloc,
+    FontMemoryAlloc,
 
     CreateDummyWindowClassname,
     CreateDummyWindow,

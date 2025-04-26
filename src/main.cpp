@@ -5,8 +5,8 @@
 void hi::Engine::start() noexcept {
     surface.set_title("Your Echolyps");
 
-    text.init();
-    text.add_text("hello, дивний світ! お風呂に入る ", -0.3f, 0.0f, 0.005f);
+    text.init(font.font_bitmap);
+    text.add_text("hello, дивний світ!", -0.3f, 0.0f, 0.005f);
     text.upload();
 }
 

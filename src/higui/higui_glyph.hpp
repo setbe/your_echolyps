@@ -63,7 +63,8 @@ struct TextRenderer {
         return 0xFFFD; // replacement character
     }
 
-    inline void init(const char *sampler_name = "textAtlas") noexcept {
+    inline void init(const unsigned char *pixels,
+                     const char *sampler_name = "textAtlas") noexcept {
         // Initialize fields
         shader_program =
             create_shader_program(text_shader_vert, text_shader_frag);
@@ -74,8 +75,7 @@ struct TextRenderer {
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH,
-                     FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE,
-                     font_bitmap);
+                     FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

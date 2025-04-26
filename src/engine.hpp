@@ -2,6 +2,7 @@
 
 #include "external/glad.hpp"
 
+#include "fonts.hpp"
 #include "higui/higui.hpp"
 #include "higui/higui_glyph.hpp"
 
@@ -14,6 +15,29 @@ struct Engine;
 }
 
 struct hi::Engine {
+    struct Font {
+        unsigned char *font_bitmap;
+        constexpr static unsigned font_memory_size =
+            FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT;
+
+        inline explicit Font() noexcept
+            : font_bitmap{
+                  static_cast<unsigned char *>(hi::alloc(font_memory_size))} {
+
+            if (!font_bitmap)
+                panic(Result{Stage::Engine, Error::FontMemoryAlloc});
+
+            decompress_font_bitmap(font_bitmap);
+        }
+
+        inline ~Font() noexcept { hi::free(font_bitmap, font_memory_size); }
+
+        Font(const Font &) = delete;
+        Font &operator=(const Font &) = delete;
+        Font(Font &&) = delete;
+        Font &operator=(Font &&) = delete;
+    };
+
   private:
     static inline void noop(const hi::Callback &) noexcept {}
     static inline void noop_int(const hi::Callback &, int) noexcept {}
@@ -24,6 +48,7 @@ struct hi::Engine {
     hi::Surface surface;
     hi::Opengl opengl;
     hi::TextRenderer text;
+    Font font;
 
     inline explicit Engine(int width, int height) noexcept
         : callback{/* user_data */ this,
@@ -33,10 +58,11 @@ struct hi::Engine {
                    /* key_up */ noop_int,
                    /* focus_gained */ noop,
                    /* focus_lost */ noop},
-          surface{&callback, width, height}, opengl{} {
+          surface{&callback, width, height}, opengl{}, font{} {
 
         callback.resize = framebuffer_resize_adapter;
         callback.focus_lost = focus_lost;
+
         start();
     }
     inline ~Engine() noexcept { /* RAII */ }
