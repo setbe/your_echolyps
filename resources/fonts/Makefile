@@ -1,13 +1,12 @@
 # ==== fonts ====
 
-FONT_EXO = Exo_2/static/Exo2-Regular.ttf
-FONT_NOTO_SANS_JP = Noto_Sans_JP/static/NotoSansJP-Regular.ttf
-FONT_TERMINUS = terminus-ttf-4.49.3/TerminusTTF-4.49.3.ttf
+FONT_UNSCII = unscii/unscii-16-full.ttf
+FONT_NOTO_SANS_JP = Noto_Sans_JP/NotoSansJP-VariableFont_wght.ttf
 
 # ==== fonts ====
 # ==== settings ====
 
-FONT_ARGS = --$(FONT_TERMINUS)-en
+FONT_ARGS = --size=16 --$(FONT_UNSCII)-la --$(FONT_UNSCII)-cy # --$(FONT_NOTO_SANS_JP)-jp
 
 # ==== settings ====
 

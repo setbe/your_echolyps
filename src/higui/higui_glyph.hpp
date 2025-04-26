@@ -3,6 +3,8 @@
 #include "../fonts.hpp"
 #include "../opengl.hpp"
 
+#include <stdint.h>
+
 namespace hi {
 struct TextRenderer {
     unsigned vao = 0;
@@ -38,6 +40,29 @@ struct TextRenderer {
     TextRenderer(TextRenderer &&) = delete;
     TextRenderer &operator=(TextRenderer &&) = delete;
 
+    inline uint32_t decode_utf8(const char *&ptr) noexcept {
+        uint8_t c = (uint8_t)*ptr++;
+        if (c < 0x80)
+            return c;
+        if ((c >> 5) == 0x6) {
+            uint32_t c2 = (uint8_t)*ptr++;
+            return ((c & 0x1F) << 6) | (c2 & 0x3F);
+        }
+        if ((c >> 4) == 0xE) {
+            uint32_t c2 = (uint8_t)*ptr++;
+            uint32_t c3 = (uint8_t)*ptr++;
+            return ((c & 0x0F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F);
+        }
+        if ((c >> 3) == 0x1E) {
+            uint32_t c2 = (uint8_t)*ptr++;
+            uint32_t c3 = (uint8_t)*ptr++;
+            uint32_t c4 = (uint8_t)*ptr++;
+            return ((c & 0x07) << 18) | ((c2 & 0x3F) << 12) |
+                   ((c3 & 0x3F) << 6) | (c4 & 0x3F);
+        }
+        return 0xFFFD; // replacement character
+    }
+
     inline void init(const char *sampler_name = "textAtlas") noexcept {
         // Initialize fields
         shader_program =
@@ -53,8 +78,8 @@ struct TextRenderer {
                      font_bitmap);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         // Buffers
         glGenVertexArrays(1, &vao);
@@ -84,8 +109,9 @@ struct TextRenderer {
         float pen_x = x;
         float pen_y = y;
 
-        for (const char *c = text; *c && char_count < max_chars; ++c) {
-            int cp = *c;
+        const char *ptr = text;
+        while (*ptr && char_count < max_chars) {
+            int cp = decode_utf8(ptr);
             const GlyphInfo *glyph = nullptr;
             for (const auto &g : font_glyphs) {
                 if (g.codepoint == cp) {
@@ -97,7 +123,7 @@ struct TextRenderer {
                 continue;
 
             float xpos = pen_x + glyph->offset_x * scale;
-            float ypos = pen_y - glyph->offset_y * scale;
+            float ypos = pen_y + (FONT_ASCENT)*scale;
             float w = glyph->w * scale;
             float h = glyph->h * scale;
 

@@ -514,7 +514,7 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
     // glad_glHint = (PFNGLHINTPROC)load("glHint");
     // glad_glLineWidth = (PFNGLLINEWIDTHPROC)load("glLineWidth");
     // glad_glPointSize = (PFNGLPOINTSIZEPROC)load("glPointSize");
-    // glad_glPolygonMode = (PFNGLPOLYGONMODEPROC)load("glPolygonMode");
+    glad_glPolygonMode = (PFNGLPOLYGONMODEPROC)load("glPolygonMode");
     // glad_glScissor = (PFNGLSCISSORPROC)load("glScissor");
     // glad_glTexParameterf = (PFNGLTEXPARAMETERFPROC)load("glTexParameterf");
     // glad_glTexParameterfv =
