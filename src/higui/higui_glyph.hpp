@@ -2,7 +2,6 @@
 #include "../external/glad.hpp"
 #include "../fonts.hpp"
 #include "../opengl.hpp"
-#include "higui_debug.hpp"
 
 #include <stdint.h>
 

@@ -12,7 +12,7 @@
 
 namespace hi {
 
-unsigned key[256] = {0};
+unsigned char key_array[256] = {0};
 
 void trim_working_set() noexcept {
     // Do nothing
@@ -167,6 +167,119 @@ void destroy(Handler) noexcept {
     }
 }
 
+static inline unsigned char get_keycode(KeySym ks) {
+    using c = unsigned char;
+    using s = unsigned short;
+
+    /* START POINT = tilde + 1
+        XK_asciitilde 0x007e (U+007E TILDE)
+    */
+
+    constexpr c start = XK_asciitilde + 1;
+
+    /* MODIFIERS
+        XK_Shift_L    0xffe1 // 65505
+        XK_Shift_R    0xffe2
+        XK_Control_L  0xffe3
+        XK_Control_R  0xffe4
+        XK_Caps_Lock  0xffe5
+        XK_Shift_Lock 0xffe6
+        XK_Meta_L     0xffe7
+        XK_Meta_R     0xffe8
+        XK_Alt_L      0xffe9
+        XK_Alt_R      0xffea
+        XK_Super_L    0xffeb
+        XK_Super_R    0xffec
+        XK_Hyper_L    0xffed
+        XK_Hyper_R    0xffee // 65518
+    */
+    constexpr s modifiers_begin = XK_Shift_L; // 65505
+    constexpr s modifiers_end = XK_Hyper_R;   // 65518
+
+    /* FUNCTIONAL
+        XK_F1  0xffbe // 65470
+        XK_F2  0xffbf
+        XK_F3  0xffc0
+        XK_F4  0xffc1
+        XK_F5  0xffc2
+        XK_F6  0xffc3
+        XK_F7  0xffc4
+        XK_F8  0xffc5
+        XK_F9  0xffc6
+        XK_F10 0xffc7
+        XK_F11 0xffc8 // 65480
+    */
+
+    constexpr s functional_begin = XK_F1; // 65470
+    constexpr s functional_end = XK_F11;  // 65480
+
+    /* TTY
+        XK_BackSpace 0xff08   // 652,88
+        XK_Tab 0xff09         // 652,89
+        XK_Linefeed 0xff0a    // 652,90
+        XK_Clear 0xff0b       // 652,91
+                              // empty 652,92 (1 char)
+        XK_Return 0xff0d      // 652,93
+                              // empty 652,94-652,98 (5 chars)
+        XK_Pause 0xff13       // 652,99
+        XK_Scroll_Lock 0xff14 // 653,00
+        XK_Sys_Req 0xff15     // 653,01
+                              // empty 653,02 - 653,06 (5 chars)
+        XK_Escape 0xff1b      // 653,07
+    */
+
+    constexpr s tty_begin = XK_BackSpace; // 65288
+    constexpr s tty_end = XK_Escape;      // 65307
+
+    /* MOTION
+        XK_Home  0xff50 // 65360
+        XK_Left  0xff51
+        XK_Up    0xff52
+        XK_Right 0xff53
+        XK_Down  0xff54 // 65364
+    */
+
+    constexpr s motion_begin = XK_Home; // 65360
+    constexpr s motion_end = XK_Down;   // 65364
+
+    constexpr s modifiers_offset = static_cast<c>(key::KeyCode::Hyper_R) -
+                                   static_cast<c>(key::KeyCode::Shift_L) + 1;
+    constexpr s functional_offset = static_cast<c>(key::KeyCode::F11) -
+                                    static_cast<c>(key::KeyCode::F1) + 1;
+    constexpr s tty_offset = static_cast<c>(key::KeyCode::Escape) -
+                             static_cast<c>(key::KeyCode::BackSpace) + 1;
+
+    // ASCII keyS
+    if (ks < start)
+        return static_cast<c>(ks); // return ASCII keycode
+
+    unsigned char result = start;
+
+    // Modifier key range
+    if (ks >= modifiers_begin && ks <= modifiers_end)
+        return result + (ks - modifiers_begin);
+
+    result += modifiers_offset; // add mod offset
+
+    // Function key range
+    if (ks >= functional_begin && ks <= functional_end)
+        return result + (ks - functional_begin);
+
+    result += functional_offset; // add function keys offset
+
+    // TTY key range
+    if (ks >= tty_begin && ks <= tty_end)
+        return result + (ks - tty_begin);
+
+    result += tty_offset; // add tty offset
+
+    // Motion key range
+    if (ks >= motion_begin && ks <= motion_end)
+        return result + (ks - motion_begin);
+
+    return 0; // not found
+}
+
 // returns `false` if user closed the window
 static inline bool handle_event(XEvent &e) noexcept {
     switch (e.type) {
@@ -174,17 +287,14 @@ static inline bool handle_event(XEvent &e) noexcept {
         cb->mouse_move(*cb, e.xmotion.x, e.xmotion.y);
         break;
     case KeyPress: {
-        KeySym ks = XLookupKeysym(&e.xkey, 0);
-        if (ks < 256)
-            hi::key[ks] = 1;
+        unsigned char hi_keycode = get_keycode(XLookupKeysym(&e.xkey, 0));
+        hi::key_array[hi_keycode] = 1; // it's safe not to check the value
         break;
     }
     case KeyRelease: {
-        KeySym ks = XLookupKeysym(&e.xkey, 0);
-        if (ks < 256) {
-            hi::key[ks] = 0;
-            cb->key_up(*cb, ks);
-        }
+        unsigned char hi_keycode = get_keycode(XLookupKeysym(&e.xkey, 0));
+        hi::key_array[hi_keycode] = 0; // it's safe not to check the value
+        cb->key_up(*cb, static_cast<::hi::key::KeyCode>(hi_keycode));
         break;
     }
     case ConfigureNotify:

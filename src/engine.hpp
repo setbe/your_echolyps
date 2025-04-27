@@ -55,7 +55,7 @@ struct hi::Engine {
                    // -- Set noop functions ---
                    /* resize */ noop_int_int,
                    /* mouse_move */ noop_int_int,
-                   /* key_up */ noop_int,
+                   /* key_up */ key_up,
                    /* focus_gained */ noop,
                    /* focus_lost */ noop},
           surface{&callback, width, height}, opengl{}, font{} {
@@ -74,6 +74,8 @@ struct hi::Engine {
 
     void start() noexcept;
     void draw() const noexcept;
+
+    static void key_up(const Callback &cb, key::KeyCode key) noexcept;
 
     inline void framebuffer_resize(const Callback &callback, int width,
                                    int height) const noexcept {
