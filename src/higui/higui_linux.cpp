@@ -74,6 +74,7 @@ static GLXContext ctx = nullptr;
 static const hi::Callback *cb = nullptr;
 static Atom wm_delete;
 
+// not tested
 int x11_error_handler(Display *display, XErrorEvent *error) noexcept {
     static_assert(sizeof(Result) == 8U);
     static_assert(sizeof(Stage) == 4U);
@@ -83,12 +84,14 @@ int x11_error_handler(Display *display, XErrorEvent *error) noexcept {
     unsigned c = (unsigned)error->error_code % 1000;
     unsigned r = (unsigned)error->request_code % 1000;
 
-    buf[6] = '0' + (c / 100) % 10;
-    buf[7] = '0' + (c / 10) % 10;
-    buf[8] = '0' + (c % 10);
-    buf[12] = '0' + (r / 100) % 10;
-    buf[13] = '0' + (r / 10) % 10;
-    buf[14] = '0' + (r % 10);
+    // using magic numbers
+    buf[6] = '0' + (c / 100) % 10; // code [0]..
+    buf[7] = '0' + (c / 10) % 10;  // code .[0].
+    buf[8] = '0' + (c % 10);       // code ..[0]
+
+    buf[12] = '0' + (r / 100) % 10; // request [0]..
+    buf[13] = '0' + (r / 10) % 10;  // request .[0].
+    buf[14] = '0' + (r % 10);       // request ..[0]
     write_err(buf);
     return 0;
 }

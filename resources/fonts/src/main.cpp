@@ -1,6 +1,8 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "external/stb_truetype.h"
 
+#include "jouyou_kanji.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -16,7 +18,7 @@ namespace fs = std::filesystem;
 // Global configuration
 int glyph_size = -1;
 int font_ascent = 0; // Will be calculated after loading font
-constexpr int PADDING = 1;
+constexpr int PADDING = 0;
 constexpr int MAX_ATLAS_SIZE = 2048;
 
 std::string output_directory = "../../src";
@@ -37,40 +39,50 @@ struct GlyphSource {
 };
 
 // Supported language codepoint ranges
-const std::vector<CodepointRange> ranges_la = {
+const std::vector<CodepointRange> ranges_en = {
     {0x0020, 0x007E}, // Basic Latin
     // {0x00A0, 0x00FF}, // Latin-1 Supplement
     // {0x0100, 0x017F}, // Latin Extended-A
     // {0x0180, 0x024F}  // Latin Extended-B
 };
-const std::vector<CodepointRange> ranges_cy = {
+const std::vector<CodepointRange> ranges_ua = {
     {0x0410, 0x0429}, // А-Щ
     {0x042E, 0x0449}, // ЮЯа-щ
     {0x044C, 0x044C}, // ь
     {0x044E, 0x044F}, // юя
     {0x0456, 0x0457}, // ії
 };
-const std::vector<CodepointRange> ranges_jp = {
+std::vector<CodepointRange> ranges_jp = {
     {0x3040, 0x309F}, // Hiragana
     {0x30A0, 0x30FF}, // Katakana
-    {0x4E00, 0x9FAF}  // CJK Unified Ideographs
+    // {0x4E00, 0x7FFF}  // CJK (cutted)
+    // {0x4E00, 0x9FAF} // CJK Unified Ideographs (~20k)
 };
 
-const std::vector<CodepointRange> *get_ranges(const std::string &lang) {
-    if (lang == "la")
-        return &ranges_la;
-    if (lang == "cy")
-        return &ranges_cy;
-    if (lang == "jp")
-        return &ranges_jp;
-    throw std::runtime_error("Unknown language: " + lang);
-}
-
-std::vector<int> get_codepoints(const std::string &lang) {
+inline std::vector<int> get_codepoints(const std::string &lang) {
     std::vector<int> cps;
-    for (auto r : *get_ranges(lang))
-        for (int c = r.begin; c <= r.end; ++c)
-            cps.push_back(c);
+
+    auto add_range = [&](const CodepointRange *ranges, size_t count) {
+        for (size_t i = 0; i < count; ++i) {
+            for (int c = ranges[i].begin; c <= ranges[i].end; ++c) {
+                cps.push_back(c);
+            }
+        }
+    };
+
+    if (lang == "en") {
+        add_range(ranges_en.data(), ranges_en.size());
+    } else if (lang == "ua") {
+        add_range(ranges_ua.data(), ranges_ua.size());
+    } else if (lang == "jp") {
+        add_range(ranges_jp.data(), ranges_jp.size());
+        cps.insert(cps.end(), jouyou_kanji_codepoints,
+                   jouyou_kanji_codepoints +
+                       sizeof(jouyou_kanji_codepoints) / sizeof(int));
+    } else {
+        throw std::runtime_error("Unknown language: " + lang);
+    }
+
     return cps;
 }
 
@@ -81,6 +93,7 @@ void load_fonts(
     std::set<std::string> &langs) {
     for (const auto &entry : font_inputs) {
         langs.insert(entry.second);
+
         std::ifstream font_file(entry.first, std::ios::binary);
         if (!font_file)
             throw std::runtime_error("Failed to open font file: " +
@@ -100,7 +113,8 @@ void load_fonts(
 
     for (const auto &src : glyph_sources_storage) {
         for (int cp : get_codepoints(src.lang)) {
-            if (stbtt_FindGlyphIndex(&src.font, cp))
+            int glyph_index = stbtt_FindGlyphIndex(&src.font, cp);
+            if (glyph_index != 0)
                 glyph_sources[cp] = &src;
         }
     }
@@ -123,6 +137,7 @@ bool try_pack_glyphs(const std::vector<int> &codepoints,
             const auto *src = glyph_sources.at(cp);
             float scale =
                 stbtt_ScaleForPixelHeight(&src->font, (float)glyph_size);
+
             int w, h, xoff, yoff;
             unsigned char *bitmap = stbtt_GetCodepointBitmap(
                 &src->font, 0, scale, cp, &w, &h, &xoff, &yoff);
@@ -131,9 +146,10 @@ bool try_pack_glyphs(const std::vector<int> &codepoints,
                 int adv, lsb;
                 stbtt_GetCodepointHMetrics(&src->font, cp, &adv, &lsb);
                 int scaled_advance = std::round(adv * scale);
-                test_glyphs.push_back("    {0,0,0,0," +
-                                      std::to_string(scaled_advance) + ",0,0," +
-                                      std::to_string(cp) + "},");
+
+                test_glyphs.push_back("    {0, 0, 0, 0, " +
+                                      std::to_string(scaled_advance) +
+                                      ", 0, 0, " + std::to_string(cp) + "},");
                 continue;
             }
 
@@ -149,23 +165,30 @@ bool try_pack_glyphs(const std::vector<int> &codepoints,
             }
 
             for (int j = 0; j < h; ++j)
-                for (int i = 0; i < w; ++i)
-                    test_bitmap[(flip_vertical ? (y + (h - 1 - j)) : (y + j)) *
-                                    atlas_width +
-                                (x + i)] = bitmap[j * w + i];
+                for (int i = 0; i < w; ++i) {
+                    int dest_y = flip_vertical ? (y + (h - 1 - j)) : (y + j);
+                    test_bitmap[dest_y * atlas_width + (x + i)] =
+                        bitmap[j * w + i];
+                }
 
             int adv, lsb;
             stbtt_GetCodepointHMetrics(&src->font, cp, &adv, &lsb);
             int scaled_advance = std::round(adv * scale);
+
+            if (scaled_advance < w + 1) {
+                scaled_advance = w + 3;
+            }
+
             test_glyphs.push_back(
-                "    {" + std::to_string(x) + "," + std::to_string(y) + "," +
-                std::to_string(w) + "," + std::to_string(h) + "," +
-                std::to_string(scaled_advance) + "," + std::to_string(xoff) +
-                "," + std::to_string(yoff) + "," + std::to_string(cp) + "},");
+                "    {" + std::to_string(x) + ", " + std::to_string(y) + ", " +
+                std::to_string(w) + ", " + std::to_string(h) + ", " +
+                std::to_string(scaled_advance) + ", " + std::to_string(xoff) +
+                ", " + std::to_string(yoff) + ", " + std::to_string(cp) + "},");
 
             x += w + PADDING;
             if (h > max_row)
                 max_row = h;
+
             stbtt_FreeBitmap(bitmap, nullptr);
         }
 
@@ -180,83 +203,110 @@ bool try_pack_glyphs(const std::vector<int> &codepoints,
     return false;
 }
 
-void compress_bitmap_rle(const std::vector<unsigned char> &atlas_bitmap,
-                         std::vector<signed char> &rle_data) {
-    size_t i = 0;
-    while (i < atlas_bitmap.size()) {
-        unsigned char value = atlas_bitmap[i];
-        size_t run = 1;
-        while (i + run < atlas_bitmap.size() &&
-               atlas_bitmap[i + run] == value && run < 127) {
-            run++;
-        }
-        rle_data.push_back((value >= 128) ? (signed char)(run)
-                                          : (signed char)(-run));
-        i += run;
-    }
-}
-
-void write_output(const std::vector<signed char> &rle_data,
+void write_output(const std::vector<unsigned char> &atlas_bitmap,
                   const std::vector<std::string> &glyph_entries,
                   const std::set<std::string> &langs, int atlas_width,
                   int atlas_height) {
     fs::path out_path = fs::path(output_directory) / output_filename;
     std::ofstream out(out_path);
+    if (!out)
+        throw std::runtime_error("Failed to open output file: " +
+                                 out_path.string());
 
+    // Step 1: Bit compression (8 pixels per byte)
+    std::vector<unsigned char> bit_compressed;
+    unsigned char current_byte = 0;
+    int bit_pos = 0;
+
+    for (auto pixel : atlas_bitmap) {
+        if (pixel >= 128)
+            current_byte |= (1 << (7 - bit_pos));
+        bit_pos++;
+        if (bit_pos == 8) {
+            bit_compressed.push_back(current_byte);
+            current_byte = 0;
+            bit_pos = 0;
+        }
+    }
+    if (bit_pos != 0)
+        bit_compressed.push_back(current_byte);
+
+    // Step 2: Zero-RLE compression on bit-compressed data
+    std::vector<unsigned char> compressed_bitmap;
+    for (size_t i = 0; i < bit_compressed.size();) {
+        if (bit_compressed[i] == 0) {
+            size_t run = 1;
+            while (i + run < bit_compressed.size() &&
+                   bit_compressed[i + run] == 0 && run < 255)
+                run++;
+            compressed_bitmap.push_back(0);
+            compressed_bitmap.push_back(static_cast<unsigned char>(run));
+            i += run;
+        } else {
+            compressed_bitmap.push_back(bit_compressed[i]);
+            i++;
+        }
+    }
+
+    // Output header file
     out << "#pragma once\n\n";
-    out << "enum class FontLanguage { la, cy, jp };\n";
-    out << "constexpr FontLanguage supported_languages[] = { ";
-    for (const auto &lang : langs)
-        out << "FontLanguage::" << lang << ", ";
-    out << "};\n\n";
-
     out << "constexpr int FONT_ATLAS_WIDTH = " << atlas_width << ";\n";
     out << "constexpr int FONT_ATLAS_HEIGHT = " << atlas_height << ";\n";
     out << "constexpr int FONT_ASCENT = " << font_ascent << ";\n\n";
 
-    out << "constexpr signed char font_bitmap_rle[] = {\n";
-    for (size_t i = 0; i < rle_data.size(); ++i) {
-        out << (int)rle_data[i] << ((i % 32 == 31) ? ",\n" : ", ");
-    }
+    out << "constexpr unsigned char compressed_font_bitmap[] = {\n";
+    for (size_t i = 0; i < compressed_bitmap.size(); ++i)
+        out << (int)compressed_bitmap[i] << ((i % 32 == 31) ? ",\n" : ", ");
     out << "};\n\n";
+
+    out << "inline void decompress_font_bitmap(unsigned char *out) noexcept "
+           "{\n";
+    out << "    unsigned char *ptr = out;\n";
+    out << "    unsigned i = 0;\n";
+    out << "    while (i < sizeof(compressed_font_bitmap)) {\n";
+    out << "        unsigned char byte = compressed_font_bitmap[i++];\n";
+    out << "        if (byte == 0) {\n";
+    out << "            if (i >= sizeof(compressed_font_bitmap)) break;\n";
+    out << "            unsigned char count = compressed_font_bitmap[i++];\n";
+    out << "            for (int j = 0; j < count; ++j) {\n";
+    out << "                for (int b = 0; b < 8; ++b) {\n";
+    out << "                    *ptr++ = 0;\n";
+    out << "                }\n";
+    out << "            }\n";
+    out << "        } else {\n";
+    out << "            for (int b = 0; b < 8; ++b) {\n";
+    out << "                *ptr++ = (byte & (1 << (7 - b))) ? 255 : 0;\n";
+    out << "            }\n";
+    out << "        }\n";
+    out << "    }\n";
+    out << "}\n\n";
 
     out << "struct GlyphInfo { int x, y, w, h, advance, offset_x, offset_y, "
            "codepoint; };\n";
     out << "constexpr GlyphInfo font_glyphs[] = {\n";
     for (const auto &entry : glyph_entries)
         out << entry << "\n";
-    out << "};\n\n";
-
-    out << R"(
-inline void decompress_font_bitmap(unsigned char* out) noexcept {
-    unsigned char* p = out;
-    for (unsigned i = 0; i < sizeof(font_bitmap_rle)/sizeof(font_bitmap_rle[0]); ++i) {
-        signed char run = font_bitmap_rle[i];
-        unsigned char value = (run > 0) ? 255 : 0;
-        unsigned char count = (run > 0) ? run : -run;
-        for (unsigned char j = 0; j < count; ++j) {
-            *p++ = value;
-        }
-    }
+    out << "};\n";
 }
-)";
-}
-
 int main(int argc, char **argv) {
     try {
         std::vector<std::pair<std::string, std::string>> font_inputs;
+
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
             if (arg.starts_with("--size=")) {
                 glyph_size = std::stoi(arg.substr(7));
                 if (glyph_size <= 0)
-                    throw std::runtime_error("Invalid font size.");
+                    throw std::runtime_error("Invalid font size specified.");
             } else if (arg.starts_with("--")) {
                 size_t sep = arg.find_last_of('-');
                 if (sep != std::string::npos) {
-                    font_inputs.emplace_back(arg.substr(2, sep - 2),
-                                             arg.substr(sep + 1));
+                    std::string path = arg.substr(2, sep - 2);
+                    std::string lang = arg.substr(sep + 1);
+                    font_inputs.emplace_back(path, lang);
                 }
+            } else if (arg == "--flip-vertical") {
+                flip_vertical = true;
             }
         }
 
@@ -269,6 +319,9 @@ int main(int argc, char **argv) {
 
         load_fonts(font_inputs, glyph_sources_storage, glyph_sources, langs);
 
+        if (glyph_sources_storage.empty())
+            throw std::runtime_error("No fonts loaded.");
+
         int ascent, descent, line_gap;
         stbtt_GetFontVMetrics(&glyph_sources_storage.front().font, &ascent,
                               &descent, &line_gap);
@@ -280,6 +333,7 @@ int main(int argc, char **argv) {
         std::vector<int> codepoints;
         for (const auto &[cp, _] : glyph_sources)
             codepoints.push_back(cp);
+
         std::sort(codepoints.begin(), codepoints.end());
 
         std::vector<unsigned char> atlas_bitmap;
@@ -288,19 +342,24 @@ int main(int argc, char **argv) {
 
         if (!try_pack_glyphs(codepoints, glyph_sources, atlas_bitmap,
                              glyph_entries, atlas_width, atlas_height))
-            throw std::runtime_error("Unable to fit glyphs in atlas.");
+            throw std::runtime_error(
+                "Unable to fit glyphs in max atlas size (try less font size or "
+                "remove languages).");
 
-        std::vector<signed char> rle_data;
-        compress_bitmap_rle(atlas_bitmap, rle_data);
+        write_output(atlas_bitmap, glyph_entries, langs, atlas_width,
+                     atlas_height);
 
-        write_output(rle_data, glyph_entries, langs, atlas_width, atlas_height);
+        std::cout << "[info] Generated " << output_directory << "/"
+                  << output_filename << " with " << glyph_entries.size()
+                  << " glyphs in " << atlas_width << "x" << atlas_height
+                  << " atlas.\n";
 
-        std::cout << "[info] Successfully generated " << output_filename
-                  << "\n";
-
-    } catch (const std::exception &e) {
-        std::cerr << "[error] " << e.what() << "\n";
+        return 0;
+    } catch (const std::exception &ex) {
+        std::cerr << "[error] Exception: " << ex.what() << "\n";
+        return 1;
+    } catch (...) {
+        std::cerr << "[error] Unknown exception.\n";
         return 1;
     }
-    return 0;
 }

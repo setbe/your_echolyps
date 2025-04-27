@@ -21,7 +21,22 @@ struct Opengl {
     };
     constexpr static unsigned int indices[6] = {0, 1, 3, 1, 2, 3};
 
-    explicit Opengl() noexcept;
+    explicit Opengl() noexcept {
+#if !defined(HI_MULTITHREADING_USED)
+        static bool first_time = true;
+#else  // use multithreading
+        thread_local bool first_time = true;
+#endif // HI_MULTITHREADING_USED
+
+        if (first_time) {
+            window::load_gl();
+            first_time = false;
+        }
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
     ~Opengl() noexcept {}
 
     Opengl(const Opengl &) = delete;
@@ -40,10 +55,10 @@ struct Opengl {
     }
 };
 
-// helper function: guarantees error handling, returns the shader
+// helper function: returns the shader, guarantees error handling
 unsigned compile_shader(unsigned type, const char *source) noexcept;
 
-// guarantees error handling, returns the program
+// returns the program, guarantees error handling
 unsigned create_shader_program(const char *vert_source,
                                const char *frag_source) noexcept;
 } // namespace hi

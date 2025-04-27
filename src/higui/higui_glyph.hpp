@@ -2,6 +2,7 @@
 #include "../external/glad.hpp"
 #include "../fonts.hpp"
 #include "../opengl.hpp"
+#include "higui_debug.hpp"
 
 #include <stdint.h>
 
@@ -123,7 +124,7 @@ struct TextRenderer {
                 continue;
 
             float xpos = pen_x + glyph->offset_x * scale;
-            float ypos = pen_y + (FONT_ASCENT)*scale;
+            float ypos = pen_y + FONT_ASCENT * scale;
             float w = glyph->w * scale;
             float h = glyph->h * scale;
 

@@ -1,12 +1,11 @@
 # ==== fonts ====
 
 FONT_UNSCII = unscii/unscii-16-full.ttf
-FONT_NOTO_SANS_JP = Noto_Sans_JP/NotoSansJP-VariableFont_wght.ttf
 
 # ==== fonts ====
 # ==== settings ====
 
-FONT_ARGS = --size=16 --$(FONT_UNSCII)-la --$(FONT_UNSCII)-cy # --$(FONT_NOTO_SANS_JP)-jp
+FONT_ARGS = --size=16 --$(FONT_UNSCII)-en --$(FONT_UNSCII)-ua # --$(FONT_UNSCII)-jp
 
 # ==== settings ====
 

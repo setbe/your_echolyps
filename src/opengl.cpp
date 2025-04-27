@@ -1,23 +1,6 @@
 #include "opengl.hpp"
 
 namespace hi {
-Opengl::Opengl() noexcept {
-#if !defined(HI_MULTITHREADING_USED)
-    static bool first_time = true;
-#else  // use multithreading
-    thread_local bool first_time = true;
-#endif // HI_MULTITHREADING_USED
-
-    if (first_time) {
-        window::load_gl();
-        first_time = false;
-    }
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-}
-
 // helper function: guarantees error handling, returns the shader
 unsigned compile_shader(unsigned type, const char *source) noexcept {
     unsigned shader = glCreateShader(type);
