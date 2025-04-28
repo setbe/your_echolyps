@@ -72,23 +72,26 @@ enum class Error : unsigned {
     InternalMemoryAlloc,
     FontMemoryAlloc,
 
+    // Windows os
     CreateDummyWindowClassname,
     CreateDummyWindow,
-
     SetDummyPixelFormat,
     NotSupportedRequiredWglExtensions,
     ModernOpenglContext,
     EnableVSync,
 
+    // Window
     OpenDisplay,
     CreateWindowClassname,
     CreateWindow,
     LoadOpenglFunctions,
 
+    // Opengl
     CompileShader,
     CreateShaderProgram,
-
-    SyscallGetTime,
+    GenerateVertexArray,
+    GenerateBuffer,
+    GenerateTexture,
 
     __Count__,
     __Max__ = 100
@@ -448,7 +451,7 @@ struct Callback {
     Void focus_gained;
     Void focus_lost;
 
-    template <typename T> inline const T *get_user_data() const noexcept {
+    template <typename T> inline T *get_user_data() const noexcept {
         return reinterpret_cast<T *>(user_data);
     }
 

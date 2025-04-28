@@ -2,10 +2,10 @@
 
 #include "external/glad.hpp"
 
-#include "fonts.hpp"
 #include "higui/higui.hpp"
 #include "higui/higui_glyph.hpp"
 
+#include "fonts.hpp"
 #include "opengl.hpp"
 
 using Handler = hi::window::Handler;

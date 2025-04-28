@@ -7,11 +7,11 @@
 
 namespace hi {
 struct TextRenderer {
-    unsigned vao = 0;
-    unsigned vbo = 0;
-    unsigned ebo = 0;
-    unsigned shader_program = 0;
-    unsigned texture = 0;
+    Opengl::VAO vao;
+    Opengl::VBO vbo;
+    Opengl::EBO ebo;
+    Opengl::ShaderProgram shader_program;
+    Opengl::Texture text_atlas;
     int text_atlas_location = 0;
 
     static constexpr int max_chars = 256;
@@ -26,21 +26,17 @@ struct TextRenderer {
 
     int char_count = 0;
 
-    explicit TextRenderer() noexcept {}
-    inline ~TextRenderer() noexcept {
-        glDeleteBuffers(1, &vbo);
-        glDeleteBuffers(1, &ebo);
-        glDeleteVertexArrays(1, &vao);
-        glDeleteTextures(1, &texture);
-        glDeleteProgram(shader_program);
-    }
+    inline explicit TextRenderer() noexcept
+        : vao{}, vbo{}, ebo{},
+          shader_program{text_shader_vert, text_shader_frag}, text_atlas{} {}
+    inline ~TextRenderer() noexcept {}
 
     TextRenderer(const TextRenderer &) = delete;
     TextRenderer &operator=(const TextRenderer &) = delete;
     TextRenderer(TextRenderer &&) = delete;
     TextRenderer &operator=(TextRenderer &&) = delete;
 
-    inline uint32_t decode_utf8(const char *&ptr) noexcept {
+    static inline uint32_t decode_utf8(const char *&ptr) noexcept {
         uint8_t c = (uint8_t)*ptr++;
         if (c < 0x80)
             return c;
@@ -65,15 +61,11 @@ struct TextRenderer {
 
     inline void init(const unsigned char *pixels,
                      const char *sampler_name = "textAtlas") noexcept {
-        // Initialize fields
-        shader_program =
-            create_shader_program(text_shader_vert, text_shader_frag);
         text_atlas_location =
-            glGetUniformLocation(shader_program, sampler_name);
+            glGetUniformLocation(shader_program.get(), sampler_name);
 
-        // Create texture
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        // Configure texture
+        glBindTexture(GL_TEXTURE_2D, text_atlas.get());
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_WIDTH,
                      FONT_ATLAS_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -82,18 +74,15 @@ struct TextRenderer {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         // Buffers
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-        glGenBuffers(1, &ebo);
+        vao.bind();
 
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), nullptr,
-                     GL_DYNAMIC_DRAW);
+        vbo.bind(GL_ARRAY_BUFFER);
+        vbo.buffer_data(GL_ARRAY_BUFFER, sizeof(vertices), nullptr,
+                        GL_DYNAMIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), nullptr,
-                     GL_DYNAMIC_DRAW);
+        ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
+        ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), nullptr,
+                        GL_DYNAMIC_DRAW);
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
@@ -168,23 +157,23 @@ struct TextRenderer {
     }
 
     inline void upload() const noexcept {
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        vao.bind();
+        vbo.bind(GL_ARRAY_BUFFER);
         glBufferSubData(GL_ARRAY_BUFFER, 0,
                         char_count * verts_per_char * floats_per_vertex *
                             sizeof(float),
                         vertices);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
                         char_count * inds_per_char * sizeof(unsigned), indices);
     }
 
     inline void draw() const noexcept {
-        glUseProgram(shader_program);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        shader_program.use();
+        text_atlas.bind(GL_TEXTURE_2D);
         glUniform1i(text_atlas_location, 0);
 
-        glBindVertexArray(vao);
+        vao.bind();
         glDrawElements(GL_TRIANGLES, char_count * inds_per_char,
                        GL_UNSIGNED_INT, nullptr);
     }
