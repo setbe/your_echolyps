@@ -1,3 +1,4 @@
+#include "higui_debug.hpp"
 #include "higui_platform.hpp"
 #include "higui_types.hpp"
 
@@ -105,15 +106,36 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
         hi::panic({Stage::CreateWindow, Error::OpenDisplay});
 
     int scr = DefaultScreen(dsp);
-    static int vis_attribs[] = {GLX_RGBA, GLX_DOUBLEBUFFER, None};
-    XVisualInfo *vi = glXChooseVisual(dsp, scr, vis_attribs);
-    XSync(dsp, False);
+
+    int fb_attribs[] = {GLX_RENDER_TYPE,
+                        GLX_RGBA_BIT,
+                        GLX_DRAWABLE_TYPE,
+                        GLX_WINDOW_BIT,
+                        GLX_DOUBLEBUFFER,
+                        True,
+                        GLX_RED_SIZE,
+                        8,
+                        GLX_GREEN_SIZE,
+                        8,
+                        GLX_BLUE_SIZE,
+                        8,
+                        GLX_DEPTH_SIZE,
+                        24,
+                        None};
+
+    int fbcount;
+    GLXFBConfig *fbc = glXChooseFBConfig(dsp, scr, fb_attribs, &fbcount);
+    if (!fbc || fbcount == 0)
+        hi::panic({Stage::Opengl, Error::ChooseFbConfig});
+
+    GLXFBConfig best_fb_config = fbc[0];
+
+    XVisualInfo *vi = glXGetVisualFromFBConfig(dsp, best_fb_config);
     if (!vi)
-        hi::panic({Stage::CreateWindow, Error::CreateWindow});
+        hi::panic({Stage::Opengl, Error::GetVisualFromFbConfig});
 
     Colormap cmap =
         XCreateColormap(dsp, RootWindow(dsp, scr), vi->visual, AllocNone);
-    XSync(dsp, False);
 
     XSetWindowAttributes swa = {};
     swa.colormap = cmap;
@@ -123,22 +145,38 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
     win = XCreateWindow(dsp, RootWindow(dsp, scr), 0, 0, width, height, 0,
                         vi->depth, InputOutput, vi->visual,
                         CWColormap | CWEventMask, &swa);
-    XSync(dsp, False);
 
     wm_delete = XInternAtom(dsp, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(dsp, win, &wm_delete, 1);
-    XSync(dsp, False);
 
     XMapWindow(dsp, win);
-    XSync(dsp, False);
 
-    ctx = glXCreateContext(dsp, vi, 0, True);
-    XSync(dsp, False);
+    typedef GLXContext (*glXCreateContextAttribsARBProc)(
+        Display *, GLXFBConfig, GLXContext, Bool, const int *);
+    glXCreateContextAttribsARBProc glXCreateContextAttribsARB =
+        (glXCreateContextAttribsARBProc)glXGetProcAddressARB(
+            (const GLubyte *)"glXCreateContextAttribsARB");
+
+    if (!glXCreateContextAttribsARB)
+        hi::panic({Stage::Opengl, Error::CreateContextAttribsArb});
+
+    int context_attribs[] = {GLX_CONTEXT_MAJOR_VERSION_ARB,
+                             4,
+                             GLX_CONTEXT_MINOR_VERSION_ARB,
+                             3,
+                             GLX_CONTEXT_PROFILE_MASK_ARB,
+                             GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+                             None};
+
+    ctx = glXCreateContextAttribsARB(dsp, best_fb_config, 0, True,
+                                     context_attribs);
     if (!ctx)
         hi::panic({Stage::Opengl, Error::ModernOpenglContext});
 
     glXMakeCurrent(dsp, win, ctx);
-    XSync(dsp, False);
+
+    XFree(vi);
+
     graphics_context = (GraphicsContext)ctx;
     cb = callbacks;
     return (Handler)win;
@@ -347,9 +385,13 @@ void setup_opengl_context(const Handler, const GraphicsContext) noexcept {
 }
 
 void load_gl() noexcept {
-    // We don't check this one, because I'm lazy
-    // and let's just hope that everything will go according to the plan
+    // We don't check if functions loaded correctly
+    // and let's hope that everything will go according to the plan
     gladLoadGLLoader((GLADloadproc)glXGetProcAddress);
+
+    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
+    printf("Renderer: %s\n", glGetString(GL_RENDERER));
+    printf("Vendor: %s\n", glGetString(GL_VENDOR));
 }
 
 void set_fullscreen(const Handler, bool) noexcept {

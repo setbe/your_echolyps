@@ -4,7 +4,7 @@ void hi::Engine::start() noexcept {
     surface.set_title("Your Echolyps");
 
     text.init(font.font_bitmap);
-    text.add_text("your echolyps!", -0.9f, 0.8f, 0.005f);
+    text.add_text("your\necholyps!", -0.9f, 0.85f, 0.004f);
     text.upload();
 }
 

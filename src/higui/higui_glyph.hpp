@@ -1,9 +1,7 @@
 #pragma once
-#include "../external/glad.hpp"
+
 #include "../fonts.hpp"
 #include "../opengl.hpp"
-
-#include <stdint.h>
 
 namespace hi {
 struct TextRenderer {
@@ -101,6 +99,13 @@ struct TextRenderer {
         const char *ptr = text;
         while (*ptr && char_count < max_chars) {
             int cp = decode_utf8(ptr);
+
+            if (cp == '\n') {
+                pen_x = x;
+                pen_y -= FONT_ASCENT * scale;
+                continue;
+            }
+
             const GlyphInfo *glyph = nullptr;
             for (const auto &g : font_glyphs) {
                 if (g.codepoint == cp) {
@@ -125,7 +130,7 @@ struct TextRenderer {
             int i_offset = char_count * inds_per_char;
             int vi = char_count * verts_per_char;
 
-            float *v = &vertices[v_offset];
+            float *v = &vertices[v_offset]; // vertex
             v[0] = xpos;
             v[1] = ypos;
             v[2] = u1;

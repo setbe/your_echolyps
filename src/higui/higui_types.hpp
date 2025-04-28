@@ -72,13 +72,16 @@ enum class Error : unsigned {
     InternalMemoryAlloc,
     FontMemoryAlloc,
 
-    // Windows os
+    // Opengl Context
     CreateDummyWindowClassname,
     CreateDummyWindow,
     SetDummyPixelFormat,
     NotSupportedRequiredWglExtensions,
-    ModernOpenglContext,
     EnableVSync,
+    ModernOpenglContext,
+    CreateContextAttribsArb,
+    ChooseFbConfig,
+    GetVisualFromFbConfig,
 
     // Window
     OpenDisplay,
