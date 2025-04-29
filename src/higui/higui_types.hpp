@@ -62,6 +62,7 @@ enum class Stage : unsigned {
     CreateWindow,
     Opengl,
     Engine,
+    Game,
 
     __Count__,
     __Max__ = 100
@@ -71,6 +72,7 @@ enum class Error : unsigned {
     None,
     InternalMemoryAlloc,
     FontMemoryAlloc,
+    ChunkMemoryAlloc,
 
     // Opengl Context
     CreateDummyWindowClassname,

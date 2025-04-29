@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external/glad.hpp"
+#include "world.hpp"
 
 #include "higui/higui.hpp"
 #include "higui/higui_glyph.hpp"
@@ -14,6 +15,8 @@ namespace hi {
 struct Engine;
 }
 
+// ===== Engine: Connects all shit together
+// =====
 struct hi::Engine {
     struct Font {
         unsigned char *font_bitmap;
@@ -39,15 +42,16 @@ struct hi::Engine {
     };
 
   private:
-    static inline void noop(const hi::Callback &) noexcept {}
-    static inline void noop_int(const hi::Callback &, int) noexcept {}
-    static inline void noop_int_int(const hi::Callback &, int, int) noexcept {}
+    static inline void noop(const Callback &) noexcept {}
+    static inline void noop_int(const Callback &, int) noexcept {}
+    static inline void noop_int_int(const Callback &, int, int) noexcept {}
 
   public:
-    hi::Callback callback;
-    hi::Surface surface;
-    hi::Opengl opengl;
-    hi::TextRenderer text;
+    Callback callback;
+    Surface surface;
+    Opengl opengl;
+    TextRenderer text;
+    World world;
     Font font;
 
     inline explicit Engine(int width, int height) noexcept
@@ -58,7 +62,7 @@ struct hi::Engine {
                    /* key_up */ key_up,
                    /* focus_gained */ noop,
                    /* focus_lost */ noop},
-          surface{&callback, width, height}, opengl{}, font{} {
+          surface{&callback, width, height}, opengl{}, world{}, font{} {
 
         callback.resize = framebuffer_resize_adapter;
         callback.focus_lost = focus_lost;

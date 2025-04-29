@@ -2901,10 +2901,11 @@ GLAPI PFNGLVIEWPORTPROC glad_glViewport;
 #ifndef GL_VERSION_1_1
 #define GL_VERSION_1_1 1
 
-// typedef void(APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first,
-//                                             GLsizei count);
-// GLAPI PFNGLDRAWARRAYSPROC glad_glDrawArrays;
-// #define glDrawArrays glad_glDrawArrays
+typedef void(APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first,
+                                            GLsizei count);
+GLAPI PFNGLDRAWARRAYSPROC glad_glDrawArrays;
+#define glDrawArrays glad_glDrawArrays
+
 typedef void(APIENTRYP PFNGLDRAWELEMENTSPROC)(GLenum mode, GLsizei count,
                                               GLenum type, const void *indices);
 GLAPI PFNGLDRAWELEMENTSPROC glad_glDrawElements;
@@ -3756,12 +3757,11 @@ GLAPI PFNGLUNIFORM1IPROC glad_glUniform1i;
 //                                                   const GLfloat *value);
 // GLAPI PFNGLUNIFORMMATRIX3FVPROC glad_glUniformMatrix3fv;
 // #define glUniformMatrix3fv glad_glUniformMatrix3fv
-// typedef void(APIENTRYP PFNGLUNIFORMMATRIX4FVPROC)(GLint location, GLsizei
-// count,
-//                                                   GLboolean transpose,
-//                                                   const GLfloat *value);
-// GLAPI PFNGLUNIFORMMATRIX4FVPROC glad_glUniformMatrix4fv;
-// #define glUniformMatrix4fv glad_glUniformMatrix4fv
+typedef void(APIENTRYP PFNGLUNIFORMMATRIX4FVPROC)(GLint location, GLsizei count,
+                                                  GLboolean transpose,
+                                                  const GLfloat *value);
+GLAPI PFNGLUNIFORMMATRIX4FVPROC glad_glUniformMatrix4fv;
+#define glUniformMatrix4fv glad_glUniformMatrix4fv
 // typedef void(APIENTRYP PFNGLVALIDATEPROGRAMPROC)(GLuint program);
 // GLAPI PFNGLVALIDATEPROGRAMPROC glad_glValidateProgram;
 // #define glValidateProgram glad_glValidateProgram
@@ -3995,10 +3995,10 @@ GLAPI PFNGLVERTEXATTRIBPOINTERPROC glad_glVertexAttribPointer;
 //                                                  offset, GLsizeiptr size);
 // GLAPI PFNGLBINDBUFFERRANGEPROC glad_glBindBufferRange;
 // #define glBindBufferRange glad_glBindBufferRange
-// typedef void(APIENTRYP PFNGLBINDBUFFERBASEPROC)(GLenum target, GLuint index,
-//                                                 GLuint buffer);
-// GLAPI PFNGLBINDBUFFERBASEPROC glad_glBindBufferBase;
-// #define glBindBufferBase glad_glBindBufferBase
+typedef void(APIENTRYP PFNGLBINDBUFFERBASEPROC)(GLenum target, GLuint index,
+                                                GLuint buffer);
+GLAPI PFNGLBINDBUFFERBASEPROC glad_glBindBufferBase;
+#define glBindBufferBase glad_glBindBufferBase
 // typedef void(APIENTRYP PFNGLTRANSFORMFEEDBACKVARYINGSPROC)(
 //     GLuint program, GLsizei count, const GLchar *const *varyings,
 //     GLenum bufferMode);
@@ -4325,12 +4325,11 @@ GLAPI PFNGLGENVERTEXARRAYSPROC glad_glGenVertexArrays;
 #ifndef GL_VERSION_3_1
 #define GL_VERSION_3_1 1
 
-// typedef void(APIENTRYP PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint
-// first,
-//                                                      GLsizei count,
-//                                                      GLsizei instancecount);
-// GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
-// #define glDrawArraysInstanced glad_glDrawArraysInstanced
+typedef void(APIENTRYP PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint first,
+                                                     GLsizei count,
+                                                     GLsizei instancecount);
+GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
+#define glDrawArraysInstanced glad_glDrawArraysInstanced
 // typedef void(APIENTRYP PFNGLDRAWELEMENTSINSTANCEDPROC)(GLenum mode,
 //                                                        GLsizei count,
 //                                                        GLenum type,

@@ -61,6 +61,10 @@ struct Opengl {
                                 unsigned usage) const noexcept {
             glBufferData(target, size, data, usage);
         }
+        inline void buffer_base(unsigned target,
+                                unsigned index) const noexcept {
+            glBindBufferBase(target, index, id);
+        }
         inline void bind(unsigned target) const noexcept {
             glBindBuffer(target, id);
         }
@@ -70,6 +74,7 @@ struct Opengl {
     }; // struct VBO
 
     using EBO = VBO;
+    using SSBO = VBO;
 
     struct ShaderProgram {
       private:
@@ -121,9 +126,10 @@ struct Opengl {
             window::load_gl();
             first_time = false;
         }
-
+        glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     }
     ~Opengl() noexcept {}
 
@@ -133,8 +139,7 @@ struct Opengl {
     Opengl &operator=(Opengl &&) = delete;
 
     inline void clear() const noexcept {
-        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     inline void framebuffer_resize(const ::hi::Callback &callback, int width,

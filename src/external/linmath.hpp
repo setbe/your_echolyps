@@ -8,13 +8,18 @@
 #define LINMATH_H_FUNC static inline
 #endif
 
-namespace math {
+// #define HI_USE_DEFAULT_MATH_LIB
 
-namespace hi {
+#ifdef HI_USE_DEFAULT_MATH_LIB
+#include "math.h"
+#endif // HI_USE_DEFAULT_MATH_LIB
+
+namespace hi::math {
 constexpr float PI = 3.14159265359f;
 constexpr float PI_2 = 1.57079632679f;
 constexpr float PI2 = 6.28318530718f;
 
+#ifndef HI_USE_DEFAULT_MATH_LIB
 static inline float fmodf_2pi(float x) noexcept {
     // x to [0, 2π)
     while (x >= PI2)
@@ -58,7 +63,7 @@ static inline float tanf(float x) noexcept {
            x * x2 * (1.0f / 3.0f + x2 * (2.0f / 15.0f + x2 * (17.0f / 315.0f)));
 }
 
-static inline float sqrtf(float x) {
+static inline float sqrtf(float x) noexcept {
     if (x <= 0.0f)
         return 0.0f;
     float xhalf = 0.5f * x;
@@ -69,8 +74,15 @@ static inline float sqrtf(float x) {
     return x * y;
 }
 
+#else // HI_USE_DEFAULT_MATH_LIB
+static inline float sinf(float x) noexcept { return ::sinf(x); }
+static inline float cosf(float x) noexcept { return ::cosf(x); }
+static inline float tanf(float x) noexcept { return ::tanf(x); }
+static inline float sqrtf(float x) noexcept { return ::sqrtf(x); }
+
+#endif // HI_USE_DEFAULT_MATH_LIB
+
 consteval float radians(float degrees) { return degrees * PI / 180.0f; }
-} // namespace hi
 
 #define LINMATH_H_DEFINE_VEC(n)                                                \
     typedef float vec##n[n];                                                   \
@@ -100,7 +112,7 @@ consteval float radians(float degrees) { return degrees * PI / 180.0f; }
         return p;                                                              \
     }                                                                          \
     LINMATH_H_FUNC float vec##n##_len(vec##n const v) {                        \
-        return hi::sqrtf(vec##n##_mul_inner(v, v));                            \
+        return sqrtf(vec##n##_mul_inner(v, v));                                \
     }                                                                          \
     LINMATH_H_FUNC void vec##n##_norm(vec##n r, vec##n const v) {              \
         float k = 1.f / vec##n##_len(v);                                       \
@@ -251,8 +263,8 @@ LINMATH_H_FUNC void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 const a,
 }
 LINMATH_H_FUNC void mat4x4_rotate(mat4x4 R, mat4x4 const M, float x, float y,
                                   float z, float angle) {
-    float s = hi::sinf(angle);
-    float c = hi::cosf(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     vec3 u = {x, y, z};
 
     if (vec3_len(u) > 1e-4) {
@@ -282,8 +294,8 @@ LINMATH_H_FUNC void mat4x4_rotate(mat4x4 R, mat4x4 const M, float x, float y,
     }
 }
 LINMATH_H_FUNC void mat4x4_rotate_X(mat4x4 Q, mat4x4 const M, float angle) {
-    float s = hi::sinf(angle);
-    float c = hi::cosf(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     mat4x4 R = {{1.f, 0.f, 0.f, 0.f},
                 {0.f, c, s, 0.f},
                 {0.f, -s, c, 0.f},
@@ -291,8 +303,8 @@ LINMATH_H_FUNC void mat4x4_rotate_X(mat4x4 Q, mat4x4 const M, float angle) {
     mat4x4_mul(Q, M, R);
 }
 LINMATH_H_FUNC void mat4x4_rotate_Y(mat4x4 Q, mat4x4 const M, float angle) {
-    float s = hi::sinf(angle);
-    float c = hi::cosf(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     mat4x4 R = {{c, 0.f, -s, 0.f},
                 {0.f, 1.f, 0.f, 0.f},
                 {s, 0.f, c, 0.f},
@@ -300,8 +312,8 @@ LINMATH_H_FUNC void mat4x4_rotate_Y(mat4x4 Q, mat4x4 const M, float angle) {
     mat4x4_mul(Q, M, R);
 }
 LINMATH_H_FUNC void mat4x4_rotate_Z(mat4x4 Q, mat4x4 const M, float angle) {
-    float s = hi::sinf(angle);
-    float c = hi::cosf(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     mat4x4 R = {{c, s, 0.f, 0.f},
                 {-s, c, 0.f, 0.f},
                 {0.f, 0.f, 1.f, 0.f},
@@ -407,7 +419,7 @@ LINMATH_H_FUNC void mat4x4_perspective(mat4x4 m, float y_fov, float aspect,
                                        float n, float f) {
     /* NOTE: Degrees are an unhandy unit to work with.
      * linmath.h uses radians for everything! */
-    float const a = 1.f / hi::tanf(y_fov / 2.f);
+    float const a = 1.f / tanf(y_fov / 2.f);
 
     m[0][0] = a / aspect;
     m[0][1] = 0.f;
@@ -503,8 +515,8 @@ LINMATH_H_FUNC void quat_conj(quat r, quat const q) {
 LINMATH_H_FUNC void quat_rotate(quat r, float angle, vec3 const axis) {
     vec3 axis_norm;
     vec3_norm(axis_norm, axis);
-    float s = hi::sinf(angle / 2);
-    float c = hi::cosf(angle / 2);
+    float s = sinf(angle / 2);
+    float c = cosf(angle / 2);
     vec3_scale(r, axis_norm, s);
     r[3] = c;
 }
@@ -584,7 +596,7 @@ LINMATH_H_FUNC void quat_from_mat4x4(quat q, mat4x4 const M) {
         p = &perm[i];
     }
 
-    r = hi::sqrtf(1.f + M[p[0]][p[0]] - M[p[1]][p[1]] - M[p[2]][p[2]]);
+    r = sqrtf(1.f + M[p[0]][p[0]] - M[p[1]][p[1]] - M[p[2]][p[2]]);
 
     if (r < 1e-6) {
         q[0] = 1.f;
@@ -597,4 +609,4 @@ LINMATH_H_FUNC void quat_from_mat4x4(quat q, mat4x4 const M) {
     q[2] = (M[p[2]][p[0]] - M[p[0]][p[2]]) / (2.f * r);
     q[3] = (M[p[2]][p[1]] - M[p[1]][p[2]]) / (2.f * r);
 }
-} // namespace math
+} // namespace hi::math

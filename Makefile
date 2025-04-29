@@ -13,10 +13,9 @@ RELEASE_CXXFLAGS = \
 
 PUBLIC_CXXFLAGS = \
   -std=c++20  -O2 -DNDEBUG -DHI_PUBLIC \
-  -flto -ffreestanding -fomit-frame-pointer \
+  -flto -fomit-frame-pointer \
   -fno-exceptions -fno-use-cxa-atexit \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
-  -mno-sse4 -mno-avx -mno-avx2 -mno-fma \
   -fno-ident
 
 DEBUG_LDFLAGS = -lX11 -lGL -ldl
