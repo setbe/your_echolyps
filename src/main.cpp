@@ -29,25 +29,40 @@ void hi::Engine::update() noexcept {
         simple_timer = 0.f;
     }
 
-    if (key::w || key::W)
-        world.camera.move_forward(dt);
-    if (key::a || key::A)
-        world.camera.move_left(dt);
-    if (key::s || key::S)
-        world.camera.move_backward(dt);
-    if (key::d || key::D)
-        world.camera.move_right(dt);
-    if (key::space)
-        world.camera.move_up(dt);
-    if (key::Shift_L)
-        world.camera.move_down(dt);
+    bool should_update_view = false;
 
     if (key::Control_L)
         world.camera.movement_speed = 50.f;
     else
         world.camera.movement_speed = 5.0f;
 
-    world.camera.look_at(world.view);
+    if (key::w || key::W) {
+        world.camera.move_forward(dt);
+        should_update_view = true;
+    }
+    if (key::a || key::A) {
+        world.camera.move_left(dt);
+        should_update_view = true;
+    }
+    if (key::s || key::S) {
+        world.camera.move_backward(dt);
+        should_update_view = true;
+    }
+    if (key::d || key::D) {
+        world.camera.move_right(dt);
+        should_update_view = true;
+    }
+    if (key::space) {
+        world.camera.move_up(dt);
+        should_update_view = true;
+    }
+    if (key::Shift_L) {
+        world.camera.move_down(dt);
+        should_update_view = true;
+    }
+
+    if (should_update_view)
+        world.camera.look_at(world.view);
 }
 
 void hi::Engine::draw() const noexcept {
