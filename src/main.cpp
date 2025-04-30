@@ -4,6 +4,11 @@
 inline static bool show_debug_menu = false;
 inline static unsigned skipped_chunks = 0;
 
+constexpr int FPS_HISTORY_SIZE = 100;
+static double dt_history[FPS_HISTORY_SIZE] = {};
+static int dt_index = 0;
+static int dt_count = 0;
+
 void hi::Engine::start() noexcept {
     surface.set_title("Your Echolyps");
     text.init(font.font_bitmap);
@@ -14,17 +19,29 @@ void hi::Engine::update() noexcept {
     static float simple_timer{0};
     simple_timer += show_debug_menu ? dt : 0.f;
 
+    dt_history[dt_index] = dt;
+    dt_index = (dt_index + 1) % FPS_HISTORY_SIZE;
+    if (dt_count < FPS_HISTORY_SIZE)
+        dt_count++;
+
+    double avg_dt = 0.0;
+    for (int i = 0; i < dt_count; ++i)
+        avg_dt += dt_history[i];
+    avg_dt /= dt_count;
+    unsigned avg_fps = avg_dt > 0.0 ? static_cast<unsigned>(1.0 / avg_dt) : 0;
+
     if (simple_timer > 0.1f) {
         unsigned fps = dt > 0.0 ? static_cast<unsigned>(1.0 / dt) : 0;
         text.add_text(-0.93f, 0.9f, 0.003f,
                       "x %f, y %f, z %f\n"
                       "fps: %d\n"
+                      "fps avg: %d\n"
                       "delta: %f\n"
                       "skipped chunks: %d\n",
                       world.camera.position[0], // x
                       world.camera.position[1], // y
                       world.camera.position[2], // z
-                      fps, static_cast<float>(dt), skipped_chunks);
+                      fps, avg_fps, static_cast<float>(dt), skipped_chunks);
         text.upload();
         simple_timer = 0.f;
     }

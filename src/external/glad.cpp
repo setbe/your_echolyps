@@ -181,7 +181,7 @@ PFNGLDELETEVERTEXARRAYSPROC glad_glDeleteVertexArrays = nullptr;
 // PFNGLDEPTHRANGEINDEXEDPROC glad_glDepthRangeIndexed = nullptr;
 // PFNGLDEPTHRANGEFPROC glad_glDepthRangef = nullptr;
 // PFNGLDETACHSHADERPROC glad_glDetachShader = nullptr;
-// PFNGLDISABLEPROC glad_glDisable = nullptr;
+PFNGLDISABLEPROC glad_glDisable = nullptr;
 // PFNGLDISABLECLIENTSTATEPROC glad_glDisableClientState = nullptr;
 // PFNGLDISABLEVERTEXATTRIBARRAYPROC glad_glDisableVertexAttribArray = nullptr;
 // PFNGLDISABLEIPROC glad_glDisablei = nullptr;
@@ -998,8 +998,8 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
     // (PFNGLCLEARDEPTHPROC)load("glClearDepth"); glad_glStencilMask =
     // (PFNGLSTENCILMASKPROC)load("glStencilMask"); glad_glColorMask =
     // (PFNGLCOLORMASKPROC)load("glColorMask"); glad_glDepthMask =
-    // (PFNGLDEPTHMASKPROC)load("glDepthMask"); glad_glDisable =
-    // (PFNGLDISABLEPROC)load("glDisable");
+    // (PFNGLDEPTHMASKPROC)load("glDepthMask");
+    glad_glDisable = (PFNGLDISABLEPROC)load("glDisable");
     glad_glEnable = (PFNGLENABLEPROC)load("glEnable");
     // glad_glFinish =
     // (PFNGLFINISHPROC)load("glFinish"); glad_glFlush =

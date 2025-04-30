@@ -1946,9 +1946,9 @@ GLAPI PFNGLCLEARCOLORPROC glad_glClearColor;
 // typedef void(APIENTRYP PFNGLDEPTHMASKPROC)(GLboolean flag);
 // GLAPI PFNGLDEPTHMASKPROC glad_glDepthMask;
 // #define glDepthMask glad_glDepthMask
-// typedef void(APIENTRYP PFNGLDISABLEPROC)(GLenum cap);
-// GLAPI PFNGLDISABLEPROC glad_glDisable;
-// #define glDisable glad_glDisable
+typedef void(APIENTRYP PFNGLDISABLEPROC)(GLenum cap);
+GLAPI PFNGLDISABLEPROC glad_glDisable;
+#define glDisable glad_glDisable
 typedef void(APIENTRYP PFNGLENABLEPROC)(GLenum cap);
 GLAPI PFNGLENABLEPROC glad_glEnable;
 #define glEnable glad_glEnable
