@@ -108,7 +108,7 @@ struct Result {
 };
 
 // Key states (pressed = true, otherwise false)
-extern unsigned char key_array[256];
+extern unsigned char key_array[];
 
 namespace key {
 #if defined(__linux__)
@@ -274,7 +274,7 @@ struct Key {
     }
 
     operator bool() const noexcept {
-        return ::hi::key_array[static_cast<unsigned char>(code)];
+        return ::hi::key_array[static_cast<unsigned char>(code)] != 0;
     }
 
     KeyCode code;

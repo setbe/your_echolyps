@@ -1,5 +1,6 @@
 #pragma once
 
+#include "camera.hpp"
 #include "external/linmath.hpp"
 #include "higui/higui_platform.hpp"
 #include "opengl.hpp"
@@ -13,21 +14,16 @@ struct World {
     math::mat4x4 projection;
     math::mat4x4 view;
 
+    Camera camera;
     Terrain terrain;
 
-    inline explicit World() noexcept : terrain{} {
-        terrain.generate_chunk(terrain.get_chunk_index(0, 0, 0));
+    inline explicit World() noexcept : terrain{}, camera{} {
+        terrain.generate();
         terrain.upload();
 
-        math::vec3 camera_pos = {-15.0f, 0.0f, -15.0f};
-        math::vec3 target = {0.5f, 0.5f, 0.5f};
-        math::vec3 up = {0.0f, 1.0f, 0.0f};
-
-        math::mat4x4_identity(projection);
-        math::mat4x4_perspective(projection, math::radians(70.f), 800.f / 600.f,
-                                 0.1f, 100.f);
-
-        math::mat4x4_look_at(view, camera_pos, target, up);
+        camera.position[0] = 45.f;
+        camera.position[1] = 6.f;
+        camera.position[2] = 14.f;
     }
 
     inline ~World() noexcept {}
@@ -37,6 +33,10 @@ struct World {
     World(World &&) = delete;
     World &operator=(World &&) = delete;
 
+    inline void camera_rotate(int xoffset, int yoffset) noexcept {
+        camera.process_mouse_movement(xoffset, yoffset);
+        camera.look_at(view);
+    }
     inline void draw() const noexcept { terrain.draw(projection, view); }
 };
 

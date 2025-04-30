@@ -37,6 +37,9 @@ void sleep(unsigned ms) noexcept;
 // returns seconds
 double time() noexcept;
 
+// returns time for previous draw call
+double delta_time() noexcept;
+
 // ===== Contains all info related to crossplatform window management =====
 namespace window {
 Handler create(const Callback *, GraphicsContext &, int width,
@@ -70,6 +73,10 @@ void create_class() noexcept;
 #else
 // No need for this. We need create `window class` on Windows only
 #endif
+
+void center_cursor(const Handler handler) noexcept;
+void set_cursor_visible(const Handler handler, bool visible) noexcept;
+void send_quit_message(const Handler handler) noexcept;
 
 } // namespace window
 } // namespace hi

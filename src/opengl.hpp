@@ -65,6 +65,11 @@ struct Opengl {
                                 unsigned index) const noexcept {
             glBindBufferBase(target, index, id);
         }
+        inline void sub_data(unsigned target, GLintptr offset, unsigned size,
+                             const void *data) const noexcept {
+            glBufferSubData(target, offset, size, data);
+        }
+
         inline void bind(unsigned target) const noexcept {
             glBindBuffer(target, id);
         }
@@ -126,6 +131,7 @@ struct Opengl {
             window::load_gl();
             first_time = false;
         }
+        glEnable(GL_MULTISAMPLE);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

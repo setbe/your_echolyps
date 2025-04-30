@@ -18,7 +18,7 @@ namespace fs = std::filesystem;
 // Global configuration
 int glyph_size = -1;
 int font_ascent = 0; // Will be calculated after loading font
-constexpr int PADDING = 0;
+constexpr int PADDING = 1;
 constexpr int MAX_ATLAS_SIZE = 2048;
 
 std::string output_directory = "../../src";

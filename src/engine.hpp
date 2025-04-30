@@ -39,7 +39,16 @@ struct hi::Engine {
         Font &operator=(const Font &) = delete;
         Font(Font &&) = delete;
         Font &operator=(Font &&) = delete;
-    };
+    }; // struct Font
+
+    struct Config {
+        int width{};
+        int height{};
+        bool is_wireframe;
+        bool is_cursor;
+
+        inline Config() noexcept : is_wireframe{false}, is_cursor{false} {}
+    }; // struct Config
 
   private:
     static inline void noop(const Callback &) noexcept {}
@@ -53,6 +62,7 @@ struct hi::Engine {
     TextRenderer text;
     World world;
     Font font;
+    Config config;
 
     inline explicit Engine(int width, int height) noexcept
         : callback{/* user_data */ this,
@@ -62,11 +72,13 @@ struct hi::Engine {
                    /* key_up */ key_up,
                    /* focus_gained */ noop,
                    /* focus_lost */ noop},
-          surface{&callback, width, height}, opengl{}, world{}, font{} {
+          surface{&callback, width, height}, opengl{}, world{}, font{},
+          config{} {
 
         callback.resize = framebuffer_resize_adapter;
+        callback.mouse_move = mouse_move_adapter;
         callback.focus_lost = focus_lost;
-
+        callback.key_up = key_up;
         start();
     }
     inline ~Engine() noexcept { /* RAII */ }
@@ -77,24 +89,58 @@ struct hi::Engine {
     Engine &operator=(Engine &&) = delete;
 
     void start() noexcept;
+    void update() noexcept;
     void draw() const noexcept;
 
     static void key_up(const Callback &cb, key::KeyCode key) noexcept;
 
     inline void framebuffer_resize(const Callback &callback, int width,
-                                   int height) const noexcept {
+                                   int height) noexcept {
+        config.width = width;
+        config.height = height;
         opengl.framebuffer_resize(callback, width, height);
+        math::mat4x4_perspective(world.projection, math::radians(70.f),
+                                 (float)width / (float)height, 0.1f, 100.f);
         this->draw();
         hi::sleep(7); // hack
     }
 
     static void framebuffer_resize_adapter(const Callback &cb, int w,
                                            int h) noexcept {
-        const Engine *engine = cb.get_user_data<Engine>();
+        Engine *engine = cb.get_user_data<Engine>();
         engine->framebuffer_resize(cb, w, h);
     }
 
     static void focus_lost(const Callback &cb) noexcept {
         hi::trim_working_set();
+    }
+
+    inline void mouse_move(int x, int y) noexcept {
+        if (!config.is_cursor)
+            return;
+
+        constexpr unsigned padding = 50;
+        static int last_x = x;
+        static int last_y = y;
+
+        if (x < padding || y < padding || x > config.width - padding ||
+            y > config.height - padding) {
+            surface.center_cursor();
+            last_x = config.width / 2;
+            last_y = config.height / 2;
+            return;
+        }
+
+        int xoffset = x - last_x;
+        int yoffset = last_y - y;
+        last_x = x;
+        last_y = y;
+
+        world.camera_rotate(xoffset, yoffset);
+    }
+
+    static void mouse_move_adapter(const Callback &cb, int x, int y) noexcept {
+        Engine *engine = cb.get_user_data<Engine>();
+        engine->mouse_move(x, y);
     }
 };

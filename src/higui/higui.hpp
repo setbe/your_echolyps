@@ -42,6 +42,16 @@ struct Surface {
     inline void swap_buffers() const noexcept {
         window::swap_buffers(get_graphics_context());
     }
+
+    inline void center_cursor() const noexcept {
+        window::center_cursor(handler_);
+    }
+
+    inline void set_cursor_visible(bool enabled) const noexcept {
+        window::set_cursor_visible(handler_, enabled);
+    }
+
+    inline void quit() const noexcept { window::send_quit_message(handler_); }
 }; // struct Surface
 
 } // namespace hi

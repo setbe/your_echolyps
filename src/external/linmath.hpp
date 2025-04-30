@@ -82,7 +82,7 @@ static inline float sqrtf(float x) noexcept { return ::sqrtf(x); }
 
 #endif // HI_USE_DEFAULT_MATH_LIB
 
-consteval float radians(float degrees) { return degrees * PI / 180.0f; }
+constexpr float radians(float degrees) { return degrees * PI / 180.0f; }
 
 #define LINMATH_H_DEFINE_VEC(n)                                                \
     typedef float vec##n[n];                                                   \

@@ -34,19 +34,18 @@ struct Chunk {
 
     inline static void generate_chunk(unsigned chunk_index,
                                       Block *out) noexcept {
-
         const unsigned chunk_offset = chunk_index * BLOCKS_PER_CHUNK;
 
         for (unsigned z = 0; z < Chunk::DEPTH; ++z) {
             for (unsigned y = 0; y < Chunk::HEIGHT; ++y) {
                 for (unsigned x = 0; x < Chunk::WIDTH; ++x) {
                     const unsigned index =
-                        chunk_offset + Chunk::get_block_index(x, y, z);
-                    if (y < 16) {
-                        out[index] = {1, 8, 0b11111100};
-                    } else {
-                        out[index] = {0, 0, 0b00000000};
-                    }
+                        Chunk::get_block_index(x, y, z) + chunk_offset;
+                    // out[index] = {1, 8, 0b11111111};
+                    if (y == -1)
+                        out[index] = {1, 8, 0b00100000};
+                    else
+                        out[index] = {1, 8, 0b00100000};
                 }
             }
         }

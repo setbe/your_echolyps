@@ -6,6 +6,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+#include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <time.h>
@@ -13,7 +14,7 @@
 
 namespace hi {
 
-unsigned char key_array[256] = {0};
+unsigned char key_array[256]{};
 
 void trim_working_set() noexcept {
     // Do nothing
@@ -37,7 +38,7 @@ static void write_err(const char *s) noexcept {
 void panic_notify(Error /*error*/, const char *msg) noexcept {
     write_err(msg);
     write_err("\n");
-    __builtin_trap(); // ud2 еквівалент у glibc/clang/gcc
+    __builtin_trap(); // asm "ud2"
 }
 
 void panic(Result result) noexcept {
@@ -66,6 +67,14 @@ double time() noexcept {
         return 0.0;
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
+
+double delta_time() noexcept {
+    static double last_time = hi::time();
+    double current_time = hi::time();
+    double delta = current_time - last_time;
+    last_time = current_time;
+    return delta;
+}
 } // namespace hi
 
 namespace hi::window {
@@ -74,6 +83,8 @@ static Window win = 0;
 static GLXContext ctx = nullptr;
 static const hi::Callback *cb = nullptr;
 static Atom wm_delete;
+static int win_width = 0;
+static int win_height = 0;
 
 // not tested
 int x11_error_handler(Display *display, XErrorEvent *error) noexcept {
@@ -121,6 +132,10 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
                         8,
                         GLX_DEPTH_SIZE,
                         24,
+                        GLX_SAMPLE_BUFFERS,
+                        1,
+                        GLX_SAMPLES,
+                        4,
                         None};
 
     int fbcount;
@@ -128,7 +143,36 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
     if (!fbc || fbcount == 0)
         hi::panic({Stage::Opengl, Error::ChooseFbConfig});
 
-    GLXFBConfig best_fb_config = fbc[0];
+#ifndef HI_USE_LESS_SAMPLES
+#define HI_USE_LESS_SAMPLES 1
+#endif
+
+    int best = -1;
+    int best_samples = HI_USE_LESS_SAMPLES ? INT32_MAX : -1;
+
+    for (int i = 0; i < fbcount; ++i) {
+        XVisualInfo *vi = glXGetVisualFromFBConfig(dsp, fbc[i]);
+        if (!vi)
+            continue;
+
+        int samp_buf = 0, samples = 0;
+        glXGetFBConfigAttrib(dsp, fbc[i], GLX_SAMPLE_BUFFERS, &samp_buf);
+        glXGetFBConfigAttrib(dsp, fbc[i], GLX_SAMPLES, &samples);
+
+        if (samp_buf) {
+            if ((!HI_USE_LESS_SAMPLES && samples > best_samples) ||
+                (HI_USE_LESS_SAMPLES && samples < best_samples)) {
+                best = i;
+                best_samples = samples;
+            }
+        } else if (best < 0 && !HI_USE_LESS_SAMPLES) {
+            best = i; // резерв на випадок відсутності multi-sampling
+        }
+
+        XFree(vi);
+    }
+
+    GLXFBConfig best_fb_config = fbc[best];
 
     XVisualInfo *vi = glXGetVisualFromFBConfig(dsp, best_fb_config);
     if (!vi)
@@ -140,7 +184,8 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
     XSetWindowAttributes swa = {};
     swa.colormap = cmap;
     swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask |
-                     ButtonMotionMask | StructureNotifyMask | FocusChangeMask;
+                     ButtonMotionMask | PointerMotionMask |
+                     StructureNotifyMask | FocusChangeMask;
 
     win = XCreateWindow(dsp, RootWindow(dsp, scr), 0, 0, width, height, 0,
                         vi->depth, InputOutput, vi->visual,
@@ -174,7 +219,6 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
         hi::panic({Stage::Opengl, Error::ModernOpenglContext});
 
     glXMakeCurrent(dsp, win, ctx);
-
     XFree(vi);
 
     graphics_context = (GraphicsContext)ctx;
@@ -185,31 +229,16 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
 void swap_buffers(const GraphicsContext) noexcept { glXSwapBuffers(dsp, win); }
 
 void destroy(Handler) noexcept {
-    if (ctx) {
-        glXDestroyContext(dsp, ctx);
-#ifdef HI_MULTITHREADING_USED
-        ctx = 0;
-#endif
-    }
-    if (win) {
-        XDestroyWindow(dsp, win);
-#ifdef HI_MULTITHREADING_USED
-        win = 0;
-#endif
-    }
-    if (dsp) {
-        XCloseDisplay(dsp);
-#ifdef HI_MULTITHREADING_USED
-        dsp = 0;
-#endif
-    }
+    glXDestroyContext(dsp, ctx);
+    XDestroyWindow(dsp, win);
+    XCloseDisplay(dsp);
 }
 
 static inline unsigned char get_keycode(KeySym ks) {
     using c = unsigned char;
     using s = unsigned short;
 
-    /* START POINT = tilde + 1
+    /* START
         XK_asciitilde 0x007e (U+007E TILDE)
     */
 
@@ -320,22 +349,41 @@ static inline unsigned char get_keycode(KeySym ks) {
 
 // returns `false` if user closed the window
 static inline bool handle_event(XEvent &e) noexcept {
+    static Time last_key_time = 0;
+    static KeyCode last_keycode = 0;
+
     switch (e.type) {
     case MotionNotify:
         cb->mouse_move(*cb, e.xmotion.x, e.xmotion.y);
         break;
     case KeyPress: {
+        if (e.xkey.time == last_key_time && e.xkey.keycode == last_keycode) {
+            break;
+        }
+        last_key_time = e.xkey.time;
+        last_keycode = e.xkey.keycode;
+
         unsigned char hi_keycode = get_keycode(XLookupKeysym(&e.xkey, 0));
-        hi::key_array[hi_keycode] = 1; // it's safe not to check the value
+        hi::key_array[hi_keycode] = 1;
         break;
     }
     case KeyRelease: {
+        if (XEventsQueued(dsp, QueuedAfterReading)) {
+            XEvent nev;
+            XPeekEvent(dsp, &nev);
+            if (nev.type == KeyPress && nev.xkey.time == e.xkey.time &&
+                nev.xkey.keycode == e.xkey.keycode) {
+                break;
+            }
+        }
         unsigned char hi_keycode = get_keycode(XLookupKeysym(&e.xkey, 0));
-        hi::key_array[hi_keycode] = 0; // it's safe not to check the value
+        hi::key_array[hi_keycode] = 0;
         cb->key_up(*cb, static_cast<::hi::key::KeyCode>(hi_keycode));
         break;
     }
     case ConfigureNotify:
+        win_width = e.xconfigure.width;
+        win_height = e.xconfigure.height;
         cb->resize(*cb, e.xconfigure.width, e.xconfigure.height);
         break;
     case FocusIn:
@@ -389,12 +437,53 @@ void load_gl() noexcept {
     // and let's hope that everything will go according to the plan
     gladLoadGLLoader((GLADloadproc)glXGetProcAddress);
 
-    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
-    printf("Renderer: %s\n", glGetString(GL_RENDERER));
-    printf("Vendor: %s\n", glGetString(GL_VENDOR));
+    debug_print("OpenGL version: %s\n", glGetString(GL_VERSION));
+    debug_print("Renderer: %s\n", glGetString(GL_RENDERER));
+    debug_print("Vendor: %s\n", glGetString(GL_VENDOR));
 }
 
 void set_fullscreen(const Handler, bool) noexcept {
     // not implemented
 }
+
+void center_cursor(const Handler handler) noexcept {
+    XWarpPointer(dsp, None, win, 0, 0, 0, 0, (int)(win_width / 2),
+                 (int)(win_height / 2));
+    XFlush(dsp);
+}
+
+void set_cursor_visible(const Handler handler, bool visible) noexcept {
+    if (visible) {
+        XUndefineCursor(dsp, win);
+        return;
+    }
+    Pixmap blank = XCreatePixmap(dsp, win, 1, 1, 1);
+    XColor dummy;
+    char data[1] = {0};
+    Pixmap mask = XCreateBitmapFromData(dsp, win, data, 1, 1);
+    Cursor invisible =
+        XCreatePixmapCursor(dsp, blank, mask, &dummy, &dummy, 0, 0);
+
+    XDefineCursor(dsp, win, invisible);
+    XFreePixmap(dsp, blank);
+    XFreePixmap(dsp, mask);
+    XFreeCursor(dsp, invisible);
+}
+
+void send_quit_message(const Handler handler) noexcept {
+    XEvent ev{};
+    ev.xclient.type = ClientMessage;
+    ev.xclient.serial = 0;
+    ev.xclient.send_event = True;
+    ev.xclient.display = dsp;
+    ev.xclient.window = win;
+    ev.xclient.message_type = XInternAtom(dsp, "WM_PROTOCOLS", True);
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = wm_delete;
+    ev.xclient.data.l[1] = CurrentTime;
+
+    XSendEvent(dsp, win, False, NoEventMask, &ev);
+    XFlush(dsp);
+}
+
 } // namespace hi::window

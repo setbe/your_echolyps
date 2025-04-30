@@ -2,8 +2,105 @@
 
 #include "../fonts.hpp"
 #include "../opengl.hpp"
+#include <stdarg.h>
 
 namespace hi {
+
+#include <stdarg.h>
+#include <stddef.h>
+
+int my_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
+    size_t len = 0;
+    const char *p = format;
+    static char buf[64]{};
+    static char tmp[32]{};
+
+    while (*p && len < size - 1) {
+        if (*p == '%') {
+            p++;
+            switch (*p) {
+            case 's': {
+                const char *s = va_arg(ap, const char *);
+                while (*s && len < size - 1)
+                    str[len++] = *s++;
+                break;
+            }
+            case 'd': {
+                int d = va_arg(ap, int);
+                int i = 0;
+                if (d < 0) {
+                    str[len++] = '-';
+                    d = -d;
+                }
+                do {
+                    tmp[i++] = '0' + (d % 10);
+                    d /= 10;
+                } while (d && i < 31);
+                while (i-- && len < size - 1)
+                    str[len++] = tmp[i];
+
+                for (char *s = buf; *s && len < size - 1; ++s)
+                    str[len++] = *s;
+                break;
+            }
+            case 'f': {
+                double f = va_arg(ap, double);
+                if (f < 0) {
+                    if (len < size - 1)
+                        str[len++] = '-';
+                    f = -f;
+                }
+
+                int int_part = (int)f;
+                double frac_part = f - int_part;
+                int i = 0;
+                if (int_part == 0) {
+                    tmp[i++] = '0';
+                } else {
+                    while (int_part && i < 31) {
+                        tmp[i++] = '0' + (int_part % 10);
+                        int_part /= 10;
+                    }
+                }
+                while (i-- && len < size - 1)
+                    str[len++] = tmp[i];
+
+                if (len < size - 1)
+                    str[len++] = '.';
+
+                frac_part *= 1000000.0;
+                int frac = (int)(frac_part + 0.5);
+
+                for (int div = 100000; div > 0 && len < size - 1; div /= 10) {
+                    str[len++] = '0' + (frac / div % 10);
+                }
+
+                break;
+            }
+
+            case '%': {
+                str[len++] = '%';
+                break;
+            }
+            default:
+                break;
+            }
+        } else {
+            str[len++] = *p;
+        }
+        p++;
+    }
+
+    str[len] = '\0';
+    return (int)len;
+}
+
+extern "C" inline const char *vformat(const char *fmt, va_list args) {
+    static char buffer[256];
+    my_vsnprintf(buffer, sizeof(buffer), fmt, args);
+    return buffer;
+}
+
 struct TextRenderer {
     Opengl::VAO vao;
     Opengl::VBO vbo;
@@ -90,11 +187,16 @@ struct TextRenderer {
                               (void *)(2 * sizeof(float)));
     }
 
-    void add_text(const char *text, float x, float y,
-                  float scale = 1.0f) noexcept {
+    void add_text(float x, float y, float scale, const char *fmt,
+                  ...) noexcept {
         char_count = 0;
         float pen_x = x;
         float pen_y = y;
+
+        va_list args;
+        va_start(args, fmt);
+        const char *text = vformat(fmt, args);
+        va_end(args);
 
         const char *ptr = text;
         while (*ptr && char_count < max_chars) {
@@ -118,7 +220,7 @@ struct TextRenderer {
 
             float xpos = pen_x + glyph->offset_x * scale;
             float ypos = pen_y + FONT_ASCENT * scale;
-            float w = glyph->w * scale;
+            float w = glyph->w * scale / 1.5f;
             float h = glyph->h * scale;
 
             float u1 = glyph->x / float(FONT_ATLAS_WIDTH);
@@ -156,7 +258,7 @@ struct TextRenderer {
             id[4] = vi + 3;
             id[5] = vi + 0;
 
-            pen_x += glyph->advance * scale;
+            pen_x += glyph->advance * scale / 1.5f;
             char_count++;
         }
     }

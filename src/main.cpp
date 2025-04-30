@@ -1,33 +1,85 @@
 #include "engine.hpp"
+#include "higui/higui_debug.hpp"
+
+inline static bool show_debug_menu = false;
 
 void hi::Engine::start() noexcept {
     surface.set_title("Your Echolyps");
     text.init(font.font_bitmap);
-    text.add_text("your\necholyps!", -0.9f, 0.85f, 0.005f);
-    text.upload();
+}
+
+void hi::Engine::update() noexcept {
+    double dt = hi::delta_time();
+    static float simple_timer{0};
+    simple_timer += show_debug_menu ? dt : 0.f;
+
+    if (simple_timer > 0.1f) {
+        unsigned fps = dt > 0.0 ? static_cast<unsigned>(1.0 / dt) : 0;
+        text.add_text(-0.93f, 0.9f, 0.003f,
+                      "x %f, y %f, z %f\n"
+                      "fps: %d\n"
+                      "delta: %f\n",
+                      world.camera.position[0], // x
+                      world.camera.position[1], // y
+                      world.camera.position[2], // z
+                      fps, static_cast<float>(dt));
+        text.upload();
+        simple_timer = 0.f;
+    }
+
+    if (key::w || key::W)
+        world.camera.move_forward(dt);
+    if (key::a || key::A)
+        world.camera.move_left(dt);
+    if (key::s || key::S)
+        world.camera.move_backward(dt);
+    if (key::d || key::D)
+        world.camera.move_right(dt);
+    if (key::space)
+        world.camera.move_up(dt);
+    if (key::Shift_L)
+        world.camera.move_down(dt);
+
+    if (key::Control_L)
+        world.camera.movement_speed = 15.f;
+    else
+        world.camera.movement_speed = 5.0f;
+
+    world.camera.look_at(world.view);
 }
 
 void hi::Engine::draw() const noexcept {
     opengl.clear();
-    text.draw();
     world.draw();
+    if (show_debug_menu)
+        text.draw();
     surface.swap_buffers();
 }
 
 void hi::Engine::key_up(const hi::Callback &cb, key::KeyCode key) noexcept {
+    Engine *e = cb.get_user_data<Engine>();
+    using key::KeyCode;
     switch (key) {
-    case key::KeyCode::F11: {
-        Engine *engine = cb.get_user_data<Engine>();
-        static bool is_wireframe = false;
-        if (is_wireframe) {
+    case KeyCode::F3: {
+        if (e->config.is_wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            engine->text.add_text("wireframe mode: off", -0.9f, 0.8f, 0.005f);
         } else {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            engine->text.add_text("wireframe mode: on", -0.9f, 0.8f, 0.005f);
         }
-        engine->text.upload();
-        is_wireframe = !is_wireframe;
+        e->config.is_wireframe = !e->config.is_wireframe;
+    } break;
+
+    case KeyCode::F2: {
+        show_debug_menu = !show_debug_menu;
+    } break;
+
+    case KeyCode::F1: {
+        e->surface.set_cursor_visible(e->config.is_cursor);
+        e->config.is_cursor = !e->config.is_cursor;
+    } break;
+
+    case KeyCode::Escape: {
+        e->surface.quit();
     } break;
 
     default:
@@ -36,11 +88,12 @@ void hi::Engine::key_up(const hi::Callback &cb, key::KeyCode key) noexcept {
 }
 
 int main() {
-    hi::Engine engine{800, 600};
+    hi::Engine e{800, 600};
 
     // `false` means user closed the window
-    while (engine.surface.poll_events()) {
-        engine.draw();
+    while (e.surface.poll_events()) {
+        e.update();
+        e.draw();
     }
     return 0;
 }

@@ -7,10 +7,10 @@
 
 #include <stdio.h>
 
-namespace hi::debug {}
+#define debug_print printf
 
 #else // !defined(NDEBUG) || defined(HI_PUBLIC)
 
-#define printf(...)
+#define debug_print(...)
 
 #endif // !defined(NDEBUG) || defined(HI_PUBLIC)
