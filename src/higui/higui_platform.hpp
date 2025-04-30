@@ -15,16 +15,17 @@ typedef char *LPSTR;
 
 #include "higui_types.hpp"
 #include <assert.h>
+#include <cstddef>
 
 namespace hi {
 
 void trim_working_set() noexcept;
 
 // Allocate OS memory, use `hi::free(ptr, size)`
-void *alloc(unsigned size) noexcept;
+void *alloc(size_t size) noexcept;
 
 // Release OS memory back
-void free(void *ptr, unsigned size) noexcept;
+void free(void *ptr, size_t size) noexcept;
 
 // Forced current process exit
 int exit(int) noexcept;

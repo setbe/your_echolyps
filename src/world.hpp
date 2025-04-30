@@ -22,8 +22,8 @@ struct World {
         terrain.upload();
 
         camera.position[0] = 45.f;
-        camera.position[1] = 6.f;
-        camera.position[2] = 14.f;
+        camera.position[1] = 45.f;
+        camera.position[2] = 114.f;
     }
 
     inline ~World() noexcept {}
@@ -37,7 +37,9 @@ struct World {
         camera.process_mouse_movement(xoffset, yoffset);
         camera.look_at(view);
     }
-    inline void draw() const noexcept { terrain.draw(projection, view); }
+    inline unsigned draw() const noexcept {
+        return terrain.draw(projection, view);
+    }
 };
 
 } // namespace hi

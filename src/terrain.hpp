@@ -15,22 +15,17 @@ struct Vertex {
     float u, v;
 };
 
-struct ChunkMesh {
-    uint32_t vertex_offset;
-    uint32_t vertex_count;
-};
-
 struct Terrain {
   private:
     Block *data;
     Vertex *mesh_buffer;
 
-    constexpr static unsigned CHUNKS_PER_X = 10;
+    constexpr static unsigned CHUNKS_PER_X = 16;
     constexpr static unsigned CHUNKS_PER_Y = 1;
-    constexpr static unsigned CHUNKS_PER_Z = 10;
+    constexpr static unsigned CHUNKS_PER_Z = 16;
     constexpr static unsigned CHUNKS_COUNT =
         CHUNKS_PER_X * CHUNKS_PER_Y * CHUNKS_PER_Z;
-    constexpr static unsigned BLOCKS_TOTAL =
+    constexpr static size_t BLOCKS_TOTAL =
         Chunk::BLOCKS_PER_CHUNK * CHUNKS_COUNT;
     constexpr static unsigned MAX_VERTICES = 10'000'000;
 
@@ -40,7 +35,7 @@ struct Terrain {
     unsigned projection_location;
     unsigned view_location;
 
-    ChunkMesh chunk_meshes[CHUNKS_COUNT];
+    Chunk::Mesh chunk_meshes[CHUNKS_COUNT];
     uint32_t used_vertices = 0;
 
     const float cube_faces[6][18] = {
@@ -93,7 +88,7 @@ struct Terrain {
     }
 
   public:
-    consteval static unsigned get_size() noexcept {
+    consteval static size_t get_size() noexcept {
         return CHUNKS_COUNT * Chunk::BLOCKS_PER_CHUNK * sizeof(Block);
     }
 
@@ -147,23 +142,41 @@ struct Terrain {
                      mesh_buffer);
     }
 
-    inline void draw(const math::mat4x4 projection,
-                     const math::mat4x4 view) const noexcept {
+    inline unsigned draw(const math::mat4x4 projection,
+                         const math::mat4x4 view) const noexcept {
         shader_program.use();
         vao.bind();
         glUniformMatrix4fv(projection_location, 1, GL_FALSE,
                            (const GLfloat *)projection);
         glUniformMatrix4fv(view_location, 1, GL_FALSE, (const GLfloat *)view);
+
+        math::mat4x4 proj_view;
+        math::mat4x4_mul(proj_view, projection, view);
+
+        float planes[6][4];
+        Chunk::extract_frustum_planes(planes, proj_view);
+
+        unsigned skipped_chunks = 0;
+
         for (unsigned i = 0; i < CHUNKS_COUNT; ++i) {
             const auto &mesh = chunk_meshes[i];
-            glDrawArrays(GL_TRIANGLES, mesh.vertex_offset, mesh.vertex_count);
+            if (Chunk::is_chunk_visible(mesh, planes)) {
+                glDrawArrays(GL_TRIANGLES, mesh.vertex_offset,
+                             mesh.vertex_count);
+            } else {
+                skipped_chunks++;
+            }
         }
+        return skipped_chunks;
     }
 
-    inline void generate_chunk(unsigned chunk_index) noexcept {
-        assert(chunk_index < CHUNKS_COUNT);
-        Chunk::generate_chunk(chunk_index, data);
+    inline void generate_block_data() noexcept {
+        for (unsigned i = 0; i < CHUNKS_COUNT; ++i)
+            Chunk::generate_chunk(i, data);
+    }
 
+    inline void generate_chunk_mesh(unsigned chunk_index) noexcept {
+        assert(chunk_index < CHUNKS_COUNT);
         unsigned base_vertex = used_vertices;
         unsigned count = 0;
 
@@ -198,18 +211,16 @@ struct Terrain {
                 }
             }
         }
-        chunk_meshes[chunk_index] = {base_vertex, count};
+
+        chunk_meshes[chunk_index] = {
+            base_vertex, count, float(cx * Chunk::WIDTH),
+            float(cy * Chunk::HEIGHT), float(cz * Chunk::DEPTH)};
     }
 
     inline void generate() noexcept {
-        for (unsigned z = 0; z < CHUNKS_PER_Z; ++z) {
-            for (unsigned y = 0; y < CHUNKS_PER_Y; ++y) {
-                for (unsigned x = 0; x < CHUNKS_PER_X; ++x) {
-                    generate_chunk(x + y * CHUNKS_PER_X +
-                                   z * CHUNKS_PER_X * CHUNKS_PER_Y);
-                }
-            }
-        }
+        generate_block_data();
+        for (unsigned i = 0; i < CHUNKS_COUNT; ++i)
+            generate_chunk_mesh(i);
     }
 
     inline const Block *get_data() const noexcept { return data; }

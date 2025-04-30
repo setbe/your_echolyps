@@ -1,3 +1,16 @@
+## Hotkeys
+`Escape` - Quit
+
+`F1` - Toggle cursor
+
+`F2` - Debug menu
+
+`F3` - Wireframe mode
+
+`WASD`, `shift`, `space` - Movement
+
+hold `Ctrl` to move fast
+
 # Build & Development Guide
 
 ### Clone the Repository (3 Ways)

@@ -20,12 +20,12 @@ void trim_working_set() noexcept {
     // Do nothing
 }
 
-void *alloc(unsigned size) noexcept {
+void *alloc(size_t size) noexcept {
     return mmap(nullptr, size, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 }
 
-void free(void *ptr, unsigned size) noexcept { munmap(ptr, size); }
+void free(void *ptr, size_t size) noexcept { munmap(ptr, size); }
 
 int exit(int code) noexcept { _exit(code); }
 
@@ -133,9 +133,7 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
                         GLX_DEPTH_SIZE,
                         24,
                         GLX_SAMPLE_BUFFERS,
-                        1,
-                        GLX_SAMPLES,
-                        4,
+                        0,
                         None};
 
     int fbcount;
@@ -143,36 +141,7 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
     if (!fbc || fbcount == 0)
         hi::panic({Stage::Opengl, Error::ChooseFbConfig});
 
-#ifndef HI_USE_LESS_SAMPLES
-#define HI_USE_LESS_SAMPLES 1
-#endif
-
-    int best = -1;
-    int best_samples = HI_USE_LESS_SAMPLES ? INT32_MAX : -1;
-
-    for (int i = 0; i < fbcount; ++i) {
-        XVisualInfo *vi = glXGetVisualFromFBConfig(dsp, fbc[i]);
-        if (!vi)
-            continue;
-
-        int samp_buf = 0, samples = 0;
-        glXGetFBConfigAttrib(dsp, fbc[i], GLX_SAMPLE_BUFFERS, &samp_buf);
-        glXGetFBConfigAttrib(dsp, fbc[i], GLX_SAMPLES, &samples);
-
-        if (samp_buf) {
-            if ((!HI_USE_LESS_SAMPLES && samples > best_samples) ||
-                (HI_USE_LESS_SAMPLES && samples < best_samples)) {
-                best = i;
-                best_samples = samples;
-            }
-        } else if (best < 0 && !HI_USE_LESS_SAMPLES) {
-            best = i; // резерв на випадок відсутності multi-sampling
-        }
-
-        XFree(vi);
-    }
-
-    GLXFBConfig best_fb_config = fbc[best];
+    GLXFBConfig best_fb_config = fbc[0];
 
     XVisualInfo *vi = glXGetVisualFromFBConfig(dsp, best_fb_config);
     if (!vi)
@@ -220,6 +189,32 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
 
     glXMakeCurrent(dsp, win, ctx);
     XFree(vi);
+
+#ifndef HI_VSYNC
+    // try EXT
+    auto glXSwapIntervalEXT =
+        (void (*)(Display *, GLXDrawable, int))glXGetProcAddressARB(
+            (const GLubyte *)"glXSwapIntervalEXT");
+
+    if (glXSwapIntervalEXT)
+        glXSwapIntervalEXT(dsp, win, 0);
+    else {
+        // try MESA
+        auto glXSwapIntervalMESA = (int (*)(unsigned int))glXGetProcAddressARB(
+            (const GLubyte *)"glXSwapIntervalMESA");
+
+        if (glXSwapIntervalMESA)
+            glXSwapIntervalMESA(0);
+        else {
+            // try SGI
+            auto glXSwapIntervalSGI = (int (*)(int))glXGetProcAddressARB(
+                (const GLubyte *)"glXSwapIntervalSGI");
+
+            if (glXSwapIntervalSGI)
+                glXSwapIntervalSGI(0);
+        }
+    }
+#endif
 
     graphics_context = (GraphicsContext)ctx;
     cb = callbacks;

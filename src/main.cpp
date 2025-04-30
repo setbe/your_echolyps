@@ -2,6 +2,7 @@
 #include "higui/higui_debug.hpp"
 
 inline static bool show_debug_menu = false;
+inline static unsigned skipped_chunks = 0;
 
 void hi::Engine::start() noexcept {
     surface.set_title("Your Echolyps");
@@ -18,11 +19,12 @@ void hi::Engine::update() noexcept {
         text.add_text(-0.93f, 0.9f, 0.003f,
                       "x %f, y %f, z %f\n"
                       "fps: %d\n"
-                      "delta: %f\n",
+                      "delta: %f\n"
+                      "skipped chunks: %d\n",
                       world.camera.position[0], // x
                       world.camera.position[1], // y
                       world.camera.position[2], // z
-                      fps, static_cast<float>(dt));
+                      fps, static_cast<float>(dt), skipped_chunks);
         text.upload();
         simple_timer = 0.f;
     }
@@ -41,7 +43,7 @@ void hi::Engine::update() noexcept {
         world.camera.move_down(dt);
 
     if (key::Control_L)
-        world.camera.movement_speed = 15.f;
+        world.camera.movement_speed = 50.f;
     else
         world.camera.movement_speed = 5.0f;
 
@@ -50,7 +52,7 @@ void hi::Engine::update() noexcept {
 
 void hi::Engine::draw() const noexcept {
     opengl.clear();
-    world.draw();
+    skipped_chunks = world.draw();
     if (show_debug_menu)
         text.draw();
     surface.swap_buffers();

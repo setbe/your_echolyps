@@ -95,12 +95,12 @@ void trim_working_set() noexcept {
 #endif
 } // trim_working_set
 
-void *alloc(unsigned size) noexcept {
+void *alloc(size_t size) noexcept {
     return VirtualAlloc(nullptr, size, MEM_COMMIT | MEM_RESERVE,
                         PAGE_READWRITE);
 } // alloc
 
-void free(void *ptr, unsigned /* size */) noexcept {
+void free(void *ptr, size_t /* size */) noexcept {
     VirtualFree(ptr, 0, MEM_RELEASE);
 } // free
 
