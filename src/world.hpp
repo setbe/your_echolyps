@@ -22,9 +22,9 @@ struct World {
         terrain.generate();
         terrain.upload();
 
-        camera.position[0] = 10.f;
-        camera.position[1] = 20.f;
-        camera.position[2] = 10.f;
+        camera.position[0] = 512.f;
+        camera.position[1] = 50.f;
+        camera.position[2] = 512.f;
     }
 
     inline ~World() noexcept {}
@@ -36,7 +36,7 @@ struct World {
 
     inline void update_projection(int width, int height) noexcept {
         math::mat4x4_perspective(projection, math::radians(camera.fov),
-                                 (float)width / (float)height, 0.1f, 10000.f);
+                                 (float)width / (float)height, 0.1f, 512.f);
     }
 
     inline void camera_rotate(int xoffset, int yoffset) noexcept {

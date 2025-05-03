@@ -18,8 +18,7 @@ void hi::Engine::update() noexcept {
             text.add_text(-0.93f, 0.9f, 0.003f,
                           "x %f y %f z %f\n"
                           "fps: %d\n"
-                          "delta: %f\n"
-                          "skipped chunks: %d\n",
+                          "delta: %f\n",
                           world.camera.position[0], // x
                           world.camera.position[1], // y
                           world.camera.position[2], // z

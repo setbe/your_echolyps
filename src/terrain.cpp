@@ -1,4 +1,3 @@
-// terrain.cpp
 #include "terrain.hpp"
 
 namespace hi {
@@ -135,6 +134,13 @@ void Terrain::upload() noexcept {
     ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
     ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, used_indices * sizeof(GLuint),
                     index_buffer, GL_DYNAMIC_DRAW);
+}
+
+void Terrain::upload_block_data_to_ssbo() noexcept {
+    ssbo.bind(GL_SHADER_STORAGE_BUFFER);
+    ssbo.buffer_data(GL_SHADER_STORAGE_BUFFER, used_vertices * sizeof(Vertex),
+                     mesh_buffer, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo.get());
 }
 
 void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
