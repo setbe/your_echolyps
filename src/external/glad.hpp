@@ -4392,13 +4392,13 @@ GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
 #ifndef GL_VERSION_3_2
 #define GL_VERSION_3_2 1
 
-// typedef void(APIENTRYP PFNGLDRAWELEMENTSBASEVERTEXPROC)(GLenum mode,
-//                                                         GLsizei count,
-//                                                         GLenum type,
-//                                                         const void *indices,
-//                                                         GLint basevertex);
-// GLAPI PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex;
-// #define glDrawElementsBaseVertex glad_glDrawElementsBaseVertex
+typedef void(APIENTRYP PFNGLDRAWELEMENTSBASEVERTEXPROC)(GLenum mode,
+                                                        GLsizei count,
+                                                        GLenum type,
+                                                        const void *indices,
+                                                        GLint basevertex);
+GLAPI PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex;
+#define glDrawElementsBaseVertex glad_glDrawElementsBaseVertex
 // typedef void(APIENTRYP PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)(
 //     GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type,
 //     const void *indices, GLint basevertex);

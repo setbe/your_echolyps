@@ -195,7 +195,7 @@ PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced = nullptr;
 // PFNGLDRAWBUFFERPROC glad_glDrawBuffer = nullptr;
 // PFNGLDRAWBUFFERSPROC glad_glDrawBuffers = nullptr;
 PFNGLDRAWELEMENTSPROC glad_glDrawElements = nullptr;
-// PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex = nullptr;
+PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex = nullptr;
 // PFNGLDRAWELEMENTSINDIRECTPROC glad_glDrawElementsIndirect = nullptr;
 // PFNGLDRAWELEMENTSINSTANCEDPROC glad_glDrawElementsInstanced = nullptr;
 // PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC
@@ -1900,8 +1900,8 @@ static void load_GL_VERSION_3_1(GLADloadproc load) {
 }
 
 static void load_GL_VERSION_3_2(GLADloadproc load) {
-    // glad_glDrawElementsBaseVertex =
-    //     (PFNGLDRAWELEMENTSBASEVERTEXPROC)load("glDrawElementsBaseVertex");
+    glad_glDrawElementsBaseVertex =
+        (PFNGLDRAWELEMENTSBASEVERTEXPROC)load("glDrawElementsBaseVertex");
     // glad_glDrawRangeElementsBaseVertex =
     //     (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)load(
     //         "glDrawRangeElementsBaseVertex");

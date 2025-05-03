@@ -43,8 +43,8 @@ struct World {
         camera.process_mouse_movement(xoffset, yoffset);
         camera.look_at(view);
     }
-    inline unsigned draw() const noexcept {
-        return terrain.draw(projection, view, camera.position);
+    inline void draw() const noexcept {
+        terrain.draw(projection, view, camera.position);
     }
 };
 

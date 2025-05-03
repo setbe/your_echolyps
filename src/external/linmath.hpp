@@ -74,6 +74,14 @@ static inline float sqrtf(float x) noexcept {
     return x * y;
 }
 
+static inline float floorf(float x) noexcept {
+    int i = (int)x;
+    if (x < 0.0f && x != static_cast<float>(i)) {
+        --i;
+    }
+    return static_cast<float>(i);
+}
+
 #else // HI_USE_DEFAULT_MATH_LIB
 static inline float sinf(float x) noexcept { return ::sinf(x); }
 static inline float cosf(float x) noexcept { return ::cosf(x); }
