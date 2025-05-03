@@ -1,60 +1,98 @@
 #pragma once
 
+#include "external/PerlinNoise.hpp"
 #include "external/linmath.hpp"
 #include "higui/higui_debug.hpp"
 #include <assert.h>
+#include <string.h>
 
 namespace hi {
 struct Block {
-    unsigned short id;   // 16 bits
-    unsigned char light; // 8 bits
-    unsigned char faces; // 8 bits (6 faces + 2 reserved bits)
+    uint16_t id;    // 16 bits
+    uint16_t flags; // 16 bits: [0..3]=light, [4..9]=faces, [10..15]=reserved
 
-    inline constexpr Block() noexcept : id(0), light(0), faces(0) {}
-    inline constexpr Block(unsigned short id_, unsigned char light_,
-                           unsigned char faces_) noexcept
-        : id(id_), light(light_), faces(faces_) {}
-}; // struct Block
+    inline constexpr Block() noexcept : id(0), flags(0) {}
 
+    inline constexpr Block(uint16_t id_, uint8_t light, uint8_t faces) noexcept
+        : id(id_), flags((light & 0xF) | ((faces & 0x3F) << 4)) {}
+
+    inline uint8_t get_light() const noexcept { return flags & 0xF; }
+
+    inline uint8_t get_faces() const noexcept { return (flags >> 4) & 0x3F; }
+
+    inline void set_light(uint8_t light) noexcept {
+        flags = (flags & ~0xF) | (light & 0xF);
+    }
+
+    inline void set_faces(uint8_t faces) noexcept {
+        flags = (flags & ~(0x3F << 4)) | ((faces & 0x3F) << 4);
+    }
+
+    // Packing Block to float
+    inline float to_float() const noexcept {
+        uint32_t packed = ((uint32_t)flags << 16) | id;
+        float result;
+        memcpy(&result, &packed, sizeof(float));
+        return result;
+    }
+
+    // Unpacking Block from float
+    static inline Block from_float(float f) noexcept {
+        uint32_t packed;
+        memcpy(&packed, &f, sizeof(uint32_t));
+        Block b;
+        b.id = packed & 0xFFFF;
+        b.flags = packed >> 16;
+        return b;
+    }
+};
+
+// Do not create `Chunk` instances.
+// This struct will be refactored into namespace
+// (if everything will go according to the plan)
 struct Chunk {
     struct Mesh {
-        uint32_t vertex_offset;
-        uint32_t vertex_count;
+        unsigned vertex_offset;
+        unsigned vertex_count;
         float world_x, world_y, world_z;
     };
-    Chunk() = delete;
+    Chunk() = delete; // delete constructor
     Chunk(const Chunk &) = delete;
     Chunk(Chunk &&) = delete;
 
-    constexpr static unsigned WIDTH = 32;
-    constexpr static unsigned HEIGHT = 32;
-    constexpr static unsigned DEPTH = 32;
+    constexpr static unsigned WIDTH = 16;
+    constexpr static unsigned HEIGHT = 16;
+    constexpr static unsigned DEPTH = 16;
 
     constexpr static unsigned BLOCKS_PER_CHUNK = WIDTH * HEIGHT * DEPTH;
 
-    inline static unsigned get_block_index(unsigned x, unsigned y,
-                                           unsigned z) noexcept {
+    inline static unsigned calculate_block_index(unsigned x, unsigned y,
+                                                 unsigned z) noexcept {
         assert(x < WIDTH && y < HEIGHT && z < DEPTH);
         return x + y * WIDTH + z * WIDTH * HEIGHT;
     }
 
-    inline static void generate_chunk(unsigned chunk_index,
-                                      Block *out) noexcept {
-        const unsigned chunk_offset = chunk_index * BLOCKS_PER_CHUNK;
+    inline static void generate_chunk(unsigned chunk_x, unsigned chunk_y,
+                                      unsigned chunk_z, Block *out,
+                                      const siv::PerlinNoise &noise,
+                                      unsigned lod_size = 1) noexcept {
+        for (unsigned z = 0; z < DEPTH; z += lod_size)
+            for (unsigned y = 0; y < HEIGHT; y += lod_size)
+                for (unsigned x = 0; x < WIDTH; x += lod_size) {
+                    const unsigned index = calculate_block_index(x, y, z);
+                    const unsigned gx = chunk_x * WIDTH + x;
+                    const unsigned gy = chunk_y * HEIGHT + y;
+                    const unsigned gz = chunk_z * DEPTH + z;
 
-        for (unsigned z = 0; z < Chunk::DEPTH; ++z) {
-            for (unsigned y = 0; y < Chunk::HEIGHT; ++y) {
-                for (unsigned x = 0; x < Chunk::WIDTH; ++x) {
-                    const unsigned index =
-                        Chunk::get_block_index(x, y, z) + chunk_offset;
-                    // out[index] = {1, 8, 0b11111111};
-                    if (y == -1)
-                        out[index] = {1, 8, 0b00100000};
-                    else
-                        out[index] = {1, 8, 0b00100000};
+                    const double h =
+                        noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 32.0;
+
+                    if (double(gy) < h) {
+                        out[index] = {1, 8, 0b111111};
+                    } else {
+                        out[index] = {0, 0, 0};
+                    }
                 }
-            }
-        }
     }
 
     inline static bool is_block_on_chunk_edge(int x, int y, int z) noexcept {

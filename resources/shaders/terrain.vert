@@ -1,17 +1,19 @@
 #version 330 core
 
-layout(location = 0) in vec3 in_position;
-layout(location = 1) in vec3 in_normal;
-layout(location = 2) in vec2 in_uv;
+layout(location = 0) in vec4 in_position_block;
 
 uniform mat4 projection;
 uniform mat4 view;
 
-out vec3 frag_normal;
-out vec2 frag_uv;
+flat out uint block_id;
+flat out uint block_flags;
 
 void main() {
-    frag_normal = in_normal;
-    frag_uv = in_uv;
-    gl_Position = projection * view * vec4(in_position, 1.0);
+    vec3 pos = in_position_block.xyz;
+    uint blk = floatBitsToUint(in_position_block.w);
+
+    block_id = blk & 0xFFFFu;
+    block_flags = (blk >> 16);
+
+    gl_Position = projection * view * vec4(pos, 1.0);
 }

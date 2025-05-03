@@ -14,6 +14,7 @@ struct Camera {
     double yaw = -90.0; // horizontal
     double pitch = 0.0; // vertical
 
+    float fov = 70;
     float movement_speed = 5.0f;
     float mouse_sensitivity = 0.1f;
 

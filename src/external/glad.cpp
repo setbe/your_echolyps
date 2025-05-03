@@ -923,7 +923,7 @@ PFNGLUSEPROGRAMPROC glad_glUseProgram = nullptr;
 // PFNGLVERTEXATTRIBI4UIVPROC glad_glVertexAttribI4uiv = nullptr;
 // PFNGLVERTEXATTRIBI4USVPROC glad_glVertexAttribI4usv = nullptr;
 // PFNGLVERTEXATTRIBIFORMATPROC glad_glVertexAttribIFormat = nullptr;
-// PFNGLVERTEXATTRIBIPOINTERPROC glad_glVertexAttribIPointer = nullptr;
+PFNGLVERTEXATTRIBIPOINTERPROC glad_glVertexAttribIPointer = nullptr;
 // PFNGLVERTEXATTRIBL1DPROC glad_glVertexAttribL1d = nullptr;
 // PFNGLVERTEXATTRIBL1DVPROC glad_glVertexAttribL1dv = nullptr;
 // PFNGLVERTEXATTRIBL2DPROC glad_glVertexAttribL2d = nullptr;
@@ -1741,8 +1741,8 @@ static void load_GL_VERSION_3_0(GLADloadproc load) {
     //     (PFNGLBEGINCONDITIONALRENDERPROC)load("glBeginConditionalRender");
     // glad_glEndConditionalRender =
     //     (PFNGLENDCONDITIONALRENDERPROC)load("glEndConditionalRender");
-    // glad_glVertexAttribIPointer =
-    //     (PFNGLVERTEXATTRIBIPOINTERPROC)load("glVertexAttribIPointer");
+    glad_glVertexAttribIPointer =
+        (PFNGLVERTEXATTRIBIPOINTERPROC)load("glVertexAttribIPointer");
     // glad_glGetVertexAttribIiv =
     //     (PFNGLGETVERTEXATTRIBIIVPROC)load("glGetVertexAttribIiv");
     // glad_glGetVertexAttribIuiv =

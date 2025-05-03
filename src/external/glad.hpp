@@ -4018,13 +4018,12 @@ GLAPI PFNGLBINDBUFFERBASEPROC glad_glBindBufferBase;
 // typedef void(APIENTRYP PFNGLENDCONDITIONALRENDERPROC)(void);
 // GLAPI PFNGLENDCONDITIONALRENDERPROC glad_glEndConditionalRender;
 // #define glEndConditionalRender glad_glEndConditionalRender
-// typedef void(APIENTRYP PFNGLVERTEXATTRIBIPOINTERPROC)(GLuint index, GLint
-// size,
-//                                                       GLenum type,
-//                                                       GLsizei stride,
-//                                                       const void *pointer);
-// GLAPI PFNGLVERTEXATTRIBIPOINTERPROC glad_glVertexAttribIPointer;
-// #define glVertexAttribIPointer glad_glVertexAttribIPointer
+typedef void(APIENTRYP PFNGLVERTEXATTRIBIPOINTERPROC)(GLuint index, GLint size,
+                                                      GLenum type,
+                                                      GLsizei stride,
+                                                      const void *pointer);
+GLAPI PFNGLVERTEXATTRIBIPOINTERPROC glad_glVertexAttribIPointer;
+#define glVertexAttribIPointer glad_glVertexAttribIPointer
 // typedef void(APIENTRYP PFNGLGETVERTEXATTRIBIIVPROC)(GLuint index, GLenum
 // pname,
 //                                                     GLint *params);

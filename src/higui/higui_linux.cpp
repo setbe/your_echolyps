@@ -153,7 +153,7 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
     XSetWindowAttributes swa = {};
     swa.colormap = cmap;
     swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask |
-                     ButtonMotionMask | PointerMotionMask |
+                     ButtonMotionMask | ButtonPressMask | PointerMotionMask |
                      StructureNotifyMask | FocusChangeMask;
 
     win = XCreateWindow(dsp, RootWindow(dsp, scr), 0, 0, width, height, 0,
@@ -189,6 +189,8 @@ Handler create(const Callback *callbacks, GraphicsContext &graphics_context,
 
     glXMakeCurrent(dsp, win, ctx);
     XFree(vi);
+
+    // #define HI_VSYNC // Uncomment this line to enable VSync
 
 #ifndef HI_VSYNC
     // try EXT
@@ -376,6 +378,8 @@ static inline bool handle_event(XEvent &e) noexcept {
         cb->key_up(*cb, static_cast<::hi::key::KeyCode>(hi_keycode));
         break;
     }
+    case ButtonPress:
+        break;
     case ConfigureNotify:
         win_width = e.xconfigure.width;
         win_height = e.xconfigure.height;

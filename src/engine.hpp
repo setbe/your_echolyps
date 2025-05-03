@@ -99,8 +99,7 @@ struct hi::Engine {
         config.width = width;
         config.height = height;
         opengl.framebuffer_resize(callback, width, height);
-        math::mat4x4_perspective(world.projection, math::radians(70.f),
-                                 (float)width / (float)height, 0.1f, 1000.f);
+        world.update_projection(width, height);
         this->draw();
         hi::sleep(7); // hack
     }

@@ -18,12 +18,13 @@ struct World {
     Terrain terrain;
 
     inline explicit World() noexcept : terrain{}, camera{} {
+        terrain.generate_block_data();
         terrain.generate();
         terrain.upload();
 
-        camera.position[0] = 45.f;
-        camera.position[1] = 45.f;
-        camera.position[2] = 114.f;
+        camera.position[0] = 10.f;
+        camera.position[1] = 20.f;
+        camera.position[2] = 10.f;
     }
 
     inline ~World() noexcept {}
@@ -33,12 +34,17 @@ struct World {
     World(World &&) = delete;
     World &operator=(World &&) = delete;
 
+    inline void update_projection(int width, int height) noexcept {
+        math::mat4x4_perspective(projection, math::radians(camera.fov),
+                                 (float)width / (float)height, 0.1f, 10000.f);
+    }
+
     inline void camera_rotate(int xoffset, int yoffset) noexcept {
         camera.process_mouse_movement(xoffset, yoffset);
         camera.look_at(view);
     }
     inline unsigned draw() const noexcept {
-        return terrain.draw(projection, view);
+        return terrain.draw(projection, view, camera.position);
     }
 };
 

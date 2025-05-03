@@ -113,6 +113,17 @@ extern unsigned char key_array[];
 namespace key {
 #if defined(__linux__)
 enum class KeyCode : unsigned char {
+    // Mouse
+    mouse_left = 1,   // Button1
+    mouse_middle = 2, // Button2
+    mouse_right = 3,  // Button3
+    scroll_up = 4,    // Button4
+    scroll_down = 5,  // Button5
+    scroll_left = 6,  // Button6 (rarely used)
+    scroll_right = 7, // Button7 (rarely used)
+    mouse_x1 = 8,     // Button8 first additional mouse button
+    mouse_x2 = 9,     // Button9 second additional mouse button
+
     // ASCII
     space = 0x20,
     exclam = 0x21,
@@ -279,6 +290,18 @@ struct Key {
 
     KeyCode code;
 };
+
+// Mouse
+
+constexpr Key mouse_left{KeyCode::mouse_left};
+constexpr Key mouse_middle{KeyCode::mouse_middle};
+constexpr Key mouse_right{KeyCode::mouse_right};
+constexpr Key scroll_up{KeyCode::scroll_up};
+constexpr Key scroll_down{KeyCode::scroll_down};
+constexpr Key scroll_left{KeyCode::scroll_left};
+constexpr Key scroll_right{KeyCode::scroll_right};
+constexpr Key mouse_x1{KeyCode::mouse_x1};
+constexpr Key mouse_x2{KeyCode::mouse_x2};
 
 // ASCII
 
