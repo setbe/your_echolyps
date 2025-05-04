@@ -22,7 +22,7 @@ void hi::Engine::update() noexcept {
                           world.camera.position[0], // x
                           world.camera.position[1], // y
                           world.camera.position[2], // z
-                          fps, static_cast<float>(dt));
+                          fps, static_cast<float>(dt) * 1000);
             text.upload();
             simple_timer = 0.f;
         }

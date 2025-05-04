@@ -19,12 +19,13 @@ struct World {
 
     inline explicit World() noexcept : terrain{}, camera{} {
         terrain.generate_block_data();
+
         terrain.generate();
         terrain.upload();
 
-        camera.position[0] = 512.f;
-        camera.position[1] = 50.f;
-        camera.position[2] = 512.f;
+        camera.position[0] = Terrain::CHUNKS_PER_X * Chunk::WIDTH / 2;
+        camera.position[1] = 40.f;
+        camera.position[2] = Terrain::CHUNKS_PER_Z * Chunk::DEPTH / 2;
     }
 
     inline ~World() noexcept {}

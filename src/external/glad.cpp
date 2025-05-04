@@ -41,7 +41,7 @@
 
 // PFNGLACCUMPROC glad_glAccum = nullptr;
 // PFNGLACTIVESHADERPROGRAMPROC glad_glActiveShaderProgram = nullptr;
-// PFNGLACTIVETEXTUREPROC glad_glActiveTexture = nullptr;
+PFNGLACTIVETEXTUREPROC glad_glActiveTexture = nullptr;
 // PFNGLALPHAFUNCPROC glad_glAlphaFunc = nullptr;
 // PFNGLARETEXTURESRESIDENTPROC glad_glAreTexturesResident = nullptr;
 // PFNGLARRAYELEMENTPROC glad_glArrayElement = nullptr;
@@ -1348,7 +1348,7 @@ static void load_GL_VERSION_1_2(GLADloadproc load) {
     //     (PFNGLCOPYTEXSUBIMAGE3DPROC)load("glCopyTexSubImage3D");
 }
 static void load_GL_VERSION_1_3(GLADloadproc load) {
-    // glad_glActiveTexture = (PFNGLACTIVETEXTUREPROC)load("glActiveTexture");
+    glad_glActiveTexture = (PFNGLACTIVETEXTUREPROC)load("glActiveTexture");
     // glad_glSampleCoverage =
     // (PFNGLSAMPLECOVERAGEPROC)load("glSampleCoverage");
     // glad_glCompressedTexImage3D =

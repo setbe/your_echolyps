@@ -3078,9 +3078,9 @@ GLAPI PFNGLGENTEXTURESPROC glad_glGenTextures;
 #ifndef GL_VERSION_1_3
 #define GL_VERSION_1_3 1
 
-// typedef void(APIENTRYP PFNGLACTIVETEXTUREPROC)(GLenum texture);
-// GLAPI PFNGLACTIVETEXTUREPROC glad_glActiveTexture;
-// #define glActiveTexture glad_glActiveTexture
+typedef void(APIENTRYP PFNGLACTIVETEXTUREPROC)(GLenum texture);
+GLAPI PFNGLACTIVETEXTUREPROC glad_glActiveTexture;
+#define glActiveTexture glad_glActiveTexture
 // typedef void(APIENTRYP PFNGLSAMPLECOVERAGEPROC)(GLfloat value,
 //                                                 GLboolean invert);
 // GLAPI PFNGLSAMPLECOVERAGEPROC glad_glSampleCoverage;

@@ -73,6 +73,7 @@ enum class Error : unsigned {
     InternalMemoryAlloc,
     FontMemoryAlloc,
     ChunkMemoryAlloc,
+    TexturepackMemoryAlloc,
 
     // Opengl Context
     CreateDummyWindowClassname,

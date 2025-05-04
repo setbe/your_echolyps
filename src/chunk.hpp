@@ -3,49 +3,112 @@
 #include "external/PerlinNoise.hpp"
 #include "external/linmath.hpp"
 #include "higui/higui_debug.hpp"
+#include "texturepack.hpp"
 #include <assert.h>
 #include <string.h>
 
 namespace hi {
 struct Block {
-    uint16_t id;    // 16 bits
-    uint16_t flags; // 16 bits: [0..3]=light, [4..9]=faces, [10..15]=reserved
+    // 12 bits - actual id, 4 bits - texture layout
+    // 0000'0000'0000|0000 actual id|texture layout
+    uint16_t id;
 
-    inline constexpr Block() noexcept : id(0), flags(0) {}
+    // 4 bits - light, 6 - visible faces, 1 - is transparent
+    // 5 - reserved
+    // 0000|0000'00|0 light|faces|is_transparent
+    uint16_t flags;
 
-    inline constexpr Block(uint16_t id_, uint8_t light, uint8_t faces) noexcept
-        : id(id_), flags((light & 0xF) | ((faces & 0x3F) << 4)) {}
+    // Constructors
+    inline constexpr Block(uint16_t id, uint8_t light, uint8_t faces,
+                           bool transparent = false) noexcept
+        : id{id}, flags{make_flags(light, faces, transparent)} {}
 
-    inline uint8_t get_light() const noexcept { return flags & 0xF; }
+    inline constexpr Block(uint16_t id, uint16_t flags) noexcept
+        : id{id}, flags{flags} {}
 
-    inline uint8_t get_faces() const noexcept { return (flags >> 4) & 0x3F; }
-
-    inline void set_light(uint8_t light) noexcept {
-        flags = (flags & ~0xF) | (light & 0xF);
+    template <uint16_t T_BlockID, uint16_t T_TextureMask>
+    static constexpr uint16_t make_id() noexcept {
+        return static_cast<uint16_t>((T_BlockID & 0x0FFF) |
+                                     ((T_TextureMask & 0x000F) << 12));
     }
 
-    inline void set_faces(uint8_t faces) noexcept {
-        flags = (flags & ~(0x3F << 4)) | ((faces & 0x3F) << 4);
+    static constexpr uint16_t make_flags(uint8_t light, uint8_t faces,
+                                         bool transparent) noexcept {
+        return static_cast<uint16_t>((light & 0x0F) | ((faces & 0x3F) << 4) |
+                                     (transparent ? (1 << 10) : 0));
     }
 
-    // Packing Block to float
+    // Accessors
+    inline uint16_t block_id() const noexcept { return id & 0x0FFF; }
+    inline uint16_t texture_protocol() const noexcept {
+        return (id >> 12) & 0x000F;
+    }
+    inline uint8_t light() const noexcept { return flags & 0x000F; }
+    inline uint8_t faces() const noexcept { return (flags >> 4) & 0x003F; }
+    inline bool transparent() const noexcept {
+        return ((flags >> 10) & 0x0001) != 0;
+    }
+
+    inline void set_block_id(uint16_t block_id) noexcept {
+        id = static_cast<uint16_t>((id & 0xF000) | (block_id & 0x0FFF));
+    }
+    inline void set_texture_protocol(uint16_t proto) noexcept {
+        id = static_cast<uint16_t>((id & 0x0FFF) | ((proto & 0x000F) << 12));
+    }
+    inline void set_light(uint8_t l) noexcept {
+        flags = static_cast<uint16_t>((flags & ~0x000F) | (l & 0x0F));
+    }
+    inline void set_faces(uint8_t f) noexcept {
+        flags = static_cast<uint16_t>((flags & ~0x03F0) | ((f & 0x3F) << 4));
+    }
+    inline void set_transparent(bool t) noexcept {
+        flags = t ? static_cast<uint16_t>(flags | (1 << 10))
+                  : static_cast<uint16_t>(flags & ~(1 << 10));
+    }
+
+    // Packing to float
     inline float to_float() const noexcept {
-        uint32_t packed = ((uint32_t)flags << 16) | id;
+        uint32_t packed = (static_cast<uint32_t>(flags) << 16) | id;
         float result;
-        memcpy(&result, &packed, sizeof(float));
+        memcpy(&result, &packed, sizeof(result));
         return result;
     }
-
-    // Unpacking Block from float
     static inline Block from_float(float f) noexcept {
         uint32_t packed;
-        memcpy(&packed, &f, sizeof(uint32_t));
-        Block b;
-        b.id = packed & 0xFFFF;
-        b.flags = packed >> 16;
-        return b;
+        memcpy(&packed, &f, sizeof(packed));
+        return {static_cast<uint16_t>(packed & 0xFFFF),
+                static_cast<uint16_t>(packed >> 16)};
     }
-};
+}; // struct Block
+
+struct BlockList {
+    struct Texture {
+        constexpr static uint16_t RESOLUTION = 16;
+        // Texture masks for ID high bits
+        constexpr static uint16_t ONE = 0b1000;
+        constexpr static uint16_t TWO =
+            0b0100; // 1st for top face, 2nd for others faces
+        constexpr static uint16_t THREE_FRONT =
+            0b0010; // 1st top, 2nd front, 3rd others
+        constexpr static uint16_t THREE_SIDES =
+            0b0001; // 1st top; 2nd front, back, left, right; 3rd bottom
+        constexpr static uint16_t SIX = 0b0000; // unique textures per face
+    }; // struct Texture
+
+#define tex(name) (static_cast<uint16_t>(Texturepack::name))
+#define block(id, texture_mask)                                                \
+    {Block::make_id<id, texture_mask>(), 8, 0b1111'1100, false}
+#define var constexpr static Block
+    // BLOCK LIST BEGIN
+    var Air = block(0, Texture::ONE);
+    var Grass = block(tex(grass1), Texture::THREE_SIDES);
+    var Dirt = block(tex(grass3), Texture::ONE);
+    var Cobblestone = block(tex(cobblestone), Texture::ONE);
+    var Tblock = block(tex(t1), Texture::SIX);
+    // BLOCK LIST END
+#undef var
+#undef block
+}; // struct BlockList
 
 // Do not create `Chunk` instances.
 // This struct will be refactored into namespace
@@ -72,25 +135,30 @@ struct Chunk {
         return x + y * WIDTH + z * WIDTH * HEIGHT;
     }
 
-    inline static void generate_chunk(unsigned chunk_x, unsigned chunk_y,
-                                      unsigned chunk_z, Block *out,
-                                      const siv::PerlinNoise &noise,
+    inline static void generate_chunk(unsigned cx, unsigned cy, unsigned cz,
+                                      Block *out, const siv::PerlinNoise &noise,
                                       unsigned lod_size = 1) noexcept {
+        constexpr int DIRT_DEPTH = 4;
         for (unsigned z = 0; z < DEPTH; z += lod_size)
             for (unsigned y = 0; y < HEIGHT; y += lod_size)
                 for (unsigned x = 0; x < WIDTH; x += lod_size) {
-                    const unsigned index = calculate_block_index(x, y, z);
-                    const unsigned gx = chunk_x * WIDTH + x;
-                    const unsigned gy = chunk_y * HEIGHT + y;
-                    const unsigned gz = chunk_z * DEPTH + z;
+                    unsigned idx = calculate_block_index(x, y, z);
+                    int gx = int(cx * WIDTH + x);
+                    int gy = int(cy * HEIGHT + y);
+                    int gz = int(cz * DEPTH + z);
 
-                    const double h =
+                    double h =
                         noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 32.0;
+                    int H = int(math::floorf(static_cast<float>(h)));
 
-                    if (double(gy) < h) {
-                        out[index] = {1, 8, 0b111111};
+                    if (gy > H) {
+                        out[idx] = BlockList::Air;
+                    } else if (gy == H) {
+                        out[idx] = BlockList::Grass;
+                    } else if (gy > H - DIRT_DEPTH) {
+                        out[idx] = BlockList::Dirt;
                     } else {
-                        out[index] = {0, 0, 0};
+                        out[idx] = BlockList::Cobblestone;
                     }
                 }
     }

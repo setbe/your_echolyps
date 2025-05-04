@@ -1,4 +1,5 @@
 #include "terrain.hpp"
+#include "texturepack.hpp"
 
 namespace hi {
 
@@ -28,6 +29,26 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     projection_location =
         glGetUniformLocation(shader_program.get(), "projection");
     view_location = glGetUniformLocation(shader_program.get(), "view");
+    atlas_location = glGetUniformLocation(shader_program.get(), "atlas");
+
+    constexpr unsigned texturepack_size =
+        TEXTUREPACK_ATLAS_WIDTH * TEXTUREPACK_ATLAS_HEIGHT * 4;
+
+    unsigned char *atlas_pixels =
+        static_cast<unsigned char *>(hi::alloc(texturepack_size));
+    if (!atlas_pixels)
+        hi::panic(Result{Stage::Game, Error::TexturepackMemoryAlloc});
+
+    decompress_atlas(atlas_pixels);
+
+    atlas.bind(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, TEXTUREPACK_ATLAS_WIDTH,
+                 TEXTUREPACK_ATLAS_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 atlas_pixels);
+
+    hi::free(atlas_pixels, texturepack_size);
 }
 
 Terrain::~Terrain() noexcept {
@@ -39,7 +60,7 @@ Terrain::~Terrain() noexcept {
 Block Terrain::get_block_at(int gx, int gy, int gz) const noexcept {
     if (gx < 0 || gy < 0 || gz < 0 || gx >= CHUNKS_PER_X * Chunk::WIDTH ||
         gy >= CHUNKS_PER_Y * Chunk::HEIGHT || gz >= CHUNKS_PER_Z * Chunk::DEPTH)
-        return {0, 0, 0};
+        return {0, 0, 0, 0};
 
     unsigned cx = gx / Chunk::WIDTH;
     unsigned cy = gy / Chunk::HEIGHT;
@@ -55,18 +76,79 @@ Block Terrain::get_block_at(int gx, int gy, int gz) const noexcept {
                 Chunk::calculate_block_index(lx, ly, lz)];
 }
 
-void Terrain::emit_face(unsigned &idx, float x, float y, float z, int face_id,
+constexpr static float CUBE_POS[6][18] = {
+    // front  (z+):  BL(0,0,1), BR(1,0,1), TR(1,1,1),   BL, TR, TL
+    {0, 0, 1, 1, 0, 1, /* */ 1, 1, 1, 0, 0, 1, /* */ 1, 1, 1, 0, 1, 1},
+
+    // back   (z-):  BL(1,0,0), BR(0,0,0), TR(0,1,0),   BL, TR, TL
+    {1, 0, 0, 0, 0, 0, /* */ 0, 1, 0, 1, 0, 0, /* */ 0, 1, 0, 1, 1, 0},
+
+    // left   (x-): BL(0,0,0), BR(0,0,1), TR(0,1,1),   BL, TR, TL
+    {0, 0, 0, 0, 0, 1, /* */ 0, 1, 1, 0, 0, 0, /* */ 0, 1, 1, 0, 1, 0},
+
+    // right  (x+):  BL(1,0,1), BR(1,0,0), TR(1,1,0),   BL, TR, TL
+    {1, 0, 1, 1, 0, 0, /* */ 1, 1, 0, 1, 0, 1, /* */ 1, 1, 0, 1, 1, 1},
+
+    // top    (y+):  BL(0,1,1), BR(1,1,1), TR(1,1,0),   BL, TR, TL
+    {0, 1, 1, 1, 1, 1, /* */ 1, 1, 0, 0, 1, 1, /* */ 1, 1, 0, 0, 1, 0},
+
+    // bottom (y-):  BL(0,0,0), BR(1,0,0), TR(1,0,1),   BL, TR, TL
+    {0, 0, 0, 1, 0, 0, /* */ 1, 0, 1, 0, 0, 0, /* */ 1, 0, 1, 0, 0, 1},
+};
+
+constexpr static float FACE_UVS[12]{0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1};
+
+void Terrain::emit_face(unsigned &idx, float x, float y, float z, int face,
                         Block block) noexcept {
-    const float *face = cube_faces[face_id];
+    const float *POS = CUBE_POS[face];
+
+    uint32_t mask = block.texture_protocol();
+    uint32_t bid = block.block_id() - 1;
+    uint32_t off = 0;
+    using Texture = BlockList::Texture;
+
+    if (mask == Texture::ONE)
+        off = 0;
+    else if (mask == Texture::TWO)
+        off = (face == 4 || face == 5) ? 0 : 1;
+    else if (mask == Texture::THREE_FRONT)
+        off = (face == 4 || face == 5) ? 0 : face == 0 ? 1 : 2;
+    else if (mask == Texture::THREE_SIDES)
+        off = face == 4 ? 0 : face == 5 ? 2 : 1;
+    else
+        off = face; // SIX
+
+    constexpr int TILES_PER_ROW =
+        TEXTUREPACK_ATLAS_WIDTH / BlockList::Texture::RESOLUTION;
+
+    uint32_t tex = bid + off;
+    uint32_t tx = tex % TILES_PER_ROW, ty = tex / TILES_PER_ROW;
+
     float packed = block.to_float();
+
     for (int i = 0; i < 6; ++i) {
-        Vertex &v = mesh_buffer[idx];
-        v.position_block[0] = x + face[i * 3 + 0];
-        v.position_block[1] = y + face[i * 3 + 1];
-        v.position_block[2] = z + face[i * 3 + 2];
-        v.position_block[3] = packed;
+        Vertex &vertex = mesh_buffer[idx];
+        vertex.position_block[0] = x + POS[i * 3 + 0];
+        vertex.position_block[1] = y + POS[i * 3 + 1];
+        vertex.position_block[2] = z + POS[i * 3 + 2];
+        vertex.position_block[3] = packed;
+
+        float u = float(tx) + FACE_UVS[i * 2 + 0];
+        float v = float(ty) + FACE_UVS[i * 2 + 1];
+        vertex.uv[0] = u / float(TILES_PER_ROW);
+        vertex.uv[1] = v / float(TILES_PER_ROW);
+
         index_buffer[used_indices++] = idx++;
     }
+}
+
+void Terrain::bind_vertex_attributes() const noexcept {
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (void *)offsetof(Vertex, position_block));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (void *)offsetof(Vertex, uv));
 }
 
 void Terrain::generate_block_data() noexcept {
@@ -78,6 +160,8 @@ void Terrain::generate_block_data() noexcept {
                 Block *dst = &data[i * Chunk::BLOCKS_PER_CHUNK];
                 Chunk::generate_chunk(cx, cy, cz, dst, noise);
             }
+
+    data[(int)(BLOCKS_TOTAL / 1.2f)] = BlockList::Tblock;
 }
 
 void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
@@ -94,7 +178,7 @@ void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
             for (unsigned x = 0; x < Chunk::WIDTH; ++x) {
                 unsigned local_index = Chunk::calculate_block_index(x, y, z);
                 Block blk = data[chunk_base + local_index];
-                if (blk.id == 0)
+                if (blk.block_id() == BlockList::Air.block_id())
                     continue;
 
                 int gx = x + cx * Chunk::WIDTH;
@@ -106,7 +190,7 @@ void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
                     int dy = (face == 5) ? -1 : (face == 4) ? 1 : 0;
                     int dz = (face == 1) ? -1 : (face == 0) ? 1 : 0;
                     Block neighbor = get_block_at(gx + dx, gy + dy, gz + dz);
-                    if (neighbor.id == 0) {
+                    if (neighbor.block_id() == 0) {
                         emit_face(used_vertices, gx, gy, gz, face, blk);
                         count += 6;
                     }
@@ -136,16 +220,13 @@ void Terrain::upload() noexcept {
                     index_buffer, GL_DYNAMIC_DRAW);
 }
 
-void Terrain::upload_block_data_to_ssbo() noexcept {
-    ssbo.bind(GL_SHADER_STORAGE_BUFFER);
-    ssbo.buffer_data(GL_SHADER_STORAGE_BUFFER, used_vertices * sizeof(Vertex),
-                     mesh_buffer, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo.get());
-}
-
 void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
                    const math::vec3 camera_pos) const noexcept {
     shader_program.use();
+    glUniform1i(atlas_location, 1);
+    glActiveTexture(GL_TEXTURE1);
+    atlas.bind(GL_TEXTURE_2D);
+
     vao.bind();
     glUniformMatrix4fv(projection_location, 1, GL_FALSE,
                        (const GLfloat *)projection);

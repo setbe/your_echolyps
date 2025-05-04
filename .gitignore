@@ -13,3 +13,9 @@
 /resources/fonts/vs/.vs
 /resources/fonts/vs/.vscode
 /resources/fonts/vs/build
+
+/src/texturepack.hpp
+/src/texturepack.png
+/resources/textures/vs/.vs
+/resources/textures/vs/.vscode
+/resources/textures/vs/build
