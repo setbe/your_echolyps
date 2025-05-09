@@ -1,5 +1,5 @@
 #pragma once
-#include "higui_platform.hpp"
+#include "platform.hpp"
 
 namespace hi {
 // ===== Surface: A lightweight abstraction over OS-dependent function calls

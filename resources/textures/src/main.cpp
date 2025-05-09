@@ -1,3 +1,5 @@
+#include "../../../src/external/miniz.hpp"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -51,31 +53,19 @@ unsigned nextPowerOfTwo(unsigned n) {
     return p;
 }
 
-void compress_rgba(const std::vector<unsigned char> &input,
-                   std::vector<unsigned> &output) {
-    size_t i = 0, total = input.size();
-    while (i < total) {
-        if (input[i] == 0) {
-            size_t run = 0;
-            while (i + run < total && input[i + run] == 0)
-                ++run;
-            size_t rem = run;
-            while (rem > 255) {
-                output.push_back(0);
-                output.push_back(255);
-                rem -= 255;
-            }
-            output.push_back(0);
-            output.push_back(static_cast<unsigned>(rem));
-            i += run;
-        } else {
-            output.push_back(input[i++]);
-        }
-    }
+std::vector<unsigned char>
+compress_with_miniz(const std::vector<unsigned char> &input) {
+    size_t bound = mz_compressBound(input.size());
+    std::vector<unsigned char> out(bound);
+    mz_ulong out_len = bound;
+    if (mz_compress(out.data(), &out_len, input.data(), input.size()) != Z_OK)
+        throw std::runtime_error("miniz compression failed");
+    out.resize(out_len);
+    return out;
 }
 
 void write_texturepack_hpp(const fs::path &output_path,
-                           const std::vector<unsigned> &compressed,
+                           const std::vector<unsigned char> &compressed,
                            unsigned width, unsigned height) {
     fs::create_directories(output_path.parent_path());
     std::ofstream out(output_path);
@@ -83,40 +73,38 @@ void write_texturepack_hpp(const fs::path &output_path,
         std::cerr << "Error: Cannot open header file: " << output_path << "\n";
         return;
     }
-    out << "#pragma once\n\n";
+
+    out << "#pragma once\n";
+    out << "#include <stdint.h>\n";
+    out << "#include \"../external/miniz.hpp\"\n";
+    out << "#include \"../higui/platform.hpp\"\n\n";
+
     out << "enum class Texturepack : unsigned short {\n";
     for (size_t i = 0; i < blocks.size(); ++i) {
         auto name = blocks[i];
         auto dot = name.find_last_of('.');
-
         out << "    " << name.substr(0, dot);
         if (i + 1 < blocks.size())
             out << "= " << (i + 1) << ",";
         out << "\n";
     }
     out << "};\n\n";
+
     out << "constexpr unsigned TEXTUREPACK_ATLAS_WIDTH = " << width << ";\n";
-    out << "constexpr unsigned TEXTUREPACK_ATLAS_HEIGHT = " << height
-        << ";\n\n";
-    out << "constexpr unsigned char compressed_atlas[] = {\n    ";
-    for (size_t i = 0; i < compressed.size(); ++i) {
-        out << compressed[i] << ((i + 1) % 16 == 0 ? ",\n    " : ", ");
-    }
-    out << "\n};\n\n";
-    out << "inline void decompress_atlas(unsigned char* out) noexcept {\n";
-    out << "    unsigned i = 0, j = 0;\n";
-    out << "    const unsigned total = sizeof(compressed_atlas) / "
-           "sizeof(compressed_atlas[0]);\n";
-    out << "    while (i < total) {\n";
-    out << "        if (compressed_atlas[i] == 0) {\n";
-    out << "            unsigned count = compressed_atlas[++i];\n";
-    out << "            for (unsigned k = 0; k < count; ++k) out[j++] = 0;\n";
-    out << "            ++i;\n";
-    out << "        } else {\n";
-    out << "            out[j++] = compressed_atlas[i++];\n";
-    out << "        }\n";
-    out << "    }\n";
-    out << "}\n";
+    out << "constexpr unsigned TEXTUREPACK_ATLAS_HEIGHT = " << height << ";\n";
+    out << "constexpr size_t TEXTUREPACK_DECOMPRESSED_SIZE = "
+           "TEXTUREPACK_ATLAS_WIDTH * "
+           "TEXTUREPACK_ATLAS_HEIGHT * 4;\n\n";
+
+    out << "constexpr unsigned char compressed_atlas[] = {";
+    for (size_t i = 0; i < compressed.size(); ++i)
+        out << (int)compressed[i] << (i + 1 < compressed.size() ? "," : "");
+    out << "};\n\n";
+
+    out << R"(inline bool decompress_atlas(uint8_t* out) noexcept {
+    size_t sz = TEXTUREPACK_DECOMPRESSED_SIZE;
+    return mz_uncompress(out, &sz, compressed_atlas, sizeof(compressed_atlas)) == Z_OK;
+})" << "\n";
 }
 
 int main(int argc, char *argv[]) {
@@ -167,9 +155,10 @@ int main(int argc, char *argv[]) {
             blocks.size() + i);
     }
 
-    fs::path output_hpp = current_dir / ".." / ".." / "src" / "texturepack.hpp";
-    fs::path output_png = current_dir / ".." / ".." / "src" / "texturepack.png";
-    fs::create_directories(output_hpp.parent_path());
+    fs::path output_hpp =
+        current_dir / ".." / ".." / "src" / "resources" / "texturepack.hpp";
+    fs::path output_png =
+        current_dir / ".." / ".." / "src" / "resources" / "texturepack.png";
 
     stbi_flip_vertically_on_write(flip_vertical);
     if (!stbi_write_png(output_png.string().c_str(), atlas_w, atlas_h, 4,
@@ -179,8 +168,7 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "PNG atlas written to: " << output_png << "\n";
 
-    std::vector<unsigned> compressed;
-    compress_rgba(atlas, compressed);
+    std::vector<unsigned char> compressed = compress_with_miniz(atlas);
     write_texturepack_hpp(output_hpp, compressed, atlas_w, atlas_h);
     std::cout << "Header written to: " << output_hpp << "\n";
 

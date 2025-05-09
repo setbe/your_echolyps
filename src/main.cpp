@@ -1,5 +1,4 @@
-#include "engine.hpp"
-#include "higui/higui_debug.hpp"
+#include "engine/engine.hpp"
 
 inline static bool show_debug_menu = false;
 

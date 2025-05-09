@@ -1,21 +1,23 @@
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <iostream>
-#include <algorithm>
 
 namespace fs = std::filesystem;
 
-bool has_shader_extension(const fs::path& path) {
-    const std::vector<std::string> exts = { ".vert", ".frag", ".geom", ".comp" };
+bool has_shader_extension(const fs::path &path) {
+    const std::vector<std::string> exts = {".vert", ".frag", ".geom", ".comp"};
     std::string ext = path.extension().string();
     return std::find(exts.begin(), exts.end(), ext) != exts.end();
 }
 
-std::string make_variable_name(const fs::path& path) {
-    std::string name = path.stem().string() + "_" + path.extension().string().substr(1); // e.g., "default_frag"
+std::string make_variable_name(const fs::path &path) {
+    std::string name =
+        path.stem().string() + "_" +
+        path.extension().string().substr(1);          // e.g., "default_frag"
     std::replace(name.begin(), name.end(), '-', '_'); // sanitize
     std::replace(name.begin(), name.end(), '.', '_');
     return name;
@@ -24,7 +26,8 @@ std::string make_variable_name(const fs::path& path) {
 int main() {
     fs::path current_dir = fs::current_path();
     fs::path shader_dir = current_dir;
-    fs::path output_file = current_dir / ".." / ".." / "src" / "shaders.hpp";
+    fs::path output_file =
+        current_dir / ".." / ".." / "src" / "resources" / "shaders.hpp";
 
     std::ofstream out(output_file);
     if (!out) {
@@ -34,7 +37,7 @@ int main() {
 
     out << "#pragma once\n\n";
 
-    for (const auto& entry : fs::directory_iterator(shader_dir)) {
+    for (const auto &entry : fs::directory_iterator(shader_dir)) {
         if (!entry.is_regular_file() || !has_shader_extension(entry.path()))
             continue;
 
@@ -50,7 +53,8 @@ int main() {
 
         std::string var_name = make_variable_name(entry.path());
 
-        out << "constexpr const char* " << var_name << " = R\"SHDR(" << content << ")SHDR\";\n\n";
+        out << "constexpr const char* " << var_name << " = R\"SHDR(" << content
+            << ")SHDR\";\n\n";
     }
 
     std::cout << "Generated " << output_file << "\n";

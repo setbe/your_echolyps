@@ -14,8 +14,6 @@ extern "C" const int _fltused;
 #endif
 #endif // !HI_RESTRICT
 
-#include "../external/glad.hpp"
-
 namespace hi {
 // ===== Window stuff =====
 namespace window {
@@ -72,6 +70,8 @@ enum class Error : unsigned {
     None,
     InternalMemoryAlloc,
     FontMemoryAlloc,
+    FontGlyphsMemoryAlloc,
+    FontDecompressMemoryAlloc,
     ChunkMemoryAlloc,
     TexturepackMemoryAlloc,
 

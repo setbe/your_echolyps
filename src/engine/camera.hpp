@@ -1,7 +1,6 @@
 #pragma once
 
-#include "external/linmath.hpp"
-#include "higui/higui_debug.hpp"
+#include "../external/linmath.hpp"
 
 namespace hi {
 struct Camera {
@@ -9,12 +8,12 @@ struct Camera {
     math::vec3 front = {0.0f, 0.0f, -1.0f}; // direction front
     math::vec3 up = {0.0f, 1.0f, 0.0f};     // vector up
     math::vec3 right = {1.0f, 0.0f, 0.0f};  // vector right
-    math::vec3 world_up = {0.0f, 1.0f, 0.0f};
+    constexpr static math::vec3 world_up = {0.0f, 1.0f, 0.0f};
 
-    double yaw = -90.0; // horizontal
-    double pitch = 0.0; // vertical
+    float yaw = -90.0f; // horizontal
+    float pitch = 0.0f; // vertical
 
-    float fov = 70;
+    float fov = 70.f;
     float movement_speed = 5.0f;
     float mouse_sensitivity = 0.1f;
 
@@ -26,18 +25,15 @@ struct Camera {
         math::mat4x4_look_at(view, position, target, up);
     }
 
-    inline void process_mouse_movement(double xoffset,
-                                       double yoffset) noexcept {
+    inline void process_mouse_movement(float xoffset, float yoffset) noexcept {
         xoffset *= mouse_sensitivity;
         yoffset *= mouse_sensitivity;
 
         yaw += xoffset;
         pitch += yoffset;
 
-        if (pitch > 89.0)
-            pitch = 89.0;
-        if (pitch < -89.0)
-            pitch = -89.0;
+        pitch = pitch > 89.f ? 89.f : pitch;   // 89 is max
+        pitch = pitch < -89.f ? -89.f : pitch; // -89 is min
 
         update_vectors();
     }
@@ -86,18 +82,25 @@ struct Camera {
 
   private:
     inline void update_vectors() noexcept {
-        math::vec3 front_tmp;
-        front_tmp[0] = static_cast<float>(math::cosf(math::radians(yaw)) *
-                                          math::cosf(math::radians(pitch)));
-        front_tmp[1] = static_cast<float>(math::sinf(math::radians(pitch)));
-        front_tmp[2] = static_cast<float>(math::sinf(math::radians(yaw)) *
-                                          math::cosf(math::radians(pitch)));
-        math::vec3_norm(front, front_tmp);
+        using namespace math;
 
-        math::vec3_mul_cross(right, front, world_up);
-        math::vec3_norm(right, right);
-        math::vec3_mul_cross(up, right, front);
-        math::vec3_norm(up, up);
+        float pitch_rad = radians(pitch);
+        float yaw_rad = radians(yaw);
+
+        float cos_pitch = cosf(pitch_rad);
+
+        vec3 front_tmp{
+            cosf(yaw_rad) * cos_pitch, // x
+            sinf(pitch_rad),           // y
+            sinf(yaw_rad) * cos_pitch  // z
+        };
+
+        vec3_norm(front, front_tmp);
+
+        vec3_mul_cross(right, front, world_up);
+        vec3_norm(right, right);
+        vec3_mul_cross(up, right, front);
+        vec3_norm(up, up);
     }
 }; // struct Camera
 } // namespace hi

@@ -28,11 +28,12 @@ DEBUG_LDFLAGS =
 RELEASE_LDFLAGS = -flto
 PUBLIC_LDFLAGS = -flto
 
+EXTERNAL_ROOT_DIR = ../../src/external
 SRC_DIR = src
 BUILD_DIR = ../../build
 TARGET = $(BUILD_DIR)/textures
 
-SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
+SRC_FILES := $(shell find $(SRC_DIR) $(EXTERNAL_ROOT_DIR) -type f \( -name "*.cpp" -o -name "*.c" \))
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
 default: clean run

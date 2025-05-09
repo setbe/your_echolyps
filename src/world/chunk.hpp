@@ -1,9 +1,10 @@
 #pragma once
 
-#include "external/PerlinNoise.hpp"
-#include "external/linmath.hpp"
-#include "higui/higui_debug.hpp"
-#include "texturepack.hpp"
+#include "../external/PerlinNoise.hpp"
+#include "../external/linmath.hpp"
+
+#include "../resources/texturepack.hpp"
+
 #include <assert.h>
 #include <string.h>
 
@@ -39,13 +40,15 @@ struct Block {
     }
 
     // Accessors
-    inline uint16_t block_id() const noexcept { return id & 0x0FFF; }
-    inline uint16_t texture_protocol() const noexcept {
+    inline constexpr uint16_t block_id() const noexcept { return id & 0x0FFF; }
+    inline constexpr uint16_t texture_protocol() const noexcept {
         return (id >> 12) & 0x000F;
     }
-    inline uint8_t light() const noexcept { return flags & 0x000F; }
-    inline uint8_t faces() const noexcept { return (flags >> 4) & 0x003F; }
-    inline bool transparent() const noexcept {
+    inline constexpr uint8_t light() const noexcept { return flags & 0x000F; }
+    inline constexpr uint8_t faces() const noexcept {
+        return (flags >> 4) & 0x003F;
+    }
+    inline constexpr bool transparent() const noexcept {
         return ((flags >> 10) & 0x0001) != 0;
     }
 
@@ -123,9 +126,9 @@ struct Chunk {
     Chunk(const Chunk &) = delete;
     Chunk(Chunk &&) = delete;
 
-    constexpr static unsigned WIDTH = 16;
-    constexpr static unsigned HEIGHT = 16;
-    constexpr static unsigned DEPTH = 16;
+    constexpr static unsigned WIDTH = 32;
+    constexpr static unsigned HEIGHT = 32;
+    constexpr static unsigned DEPTH = 32;
 
     constexpr static unsigned BLOCKS_PER_CHUNK = WIDTH * HEIGHT * DEPTH;
 

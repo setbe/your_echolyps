@@ -1,9 +1,9 @@
 #pragma once
 
-#include "camera.hpp"
-#include "external/linmath.hpp"
-#include "higui/higui_platform.hpp"
-#include "opengl.hpp"
+#include "../engine/camera.hpp"
+#include "../engine/opengl.hpp"
+
+#include "../external/linmath.hpp"
 #include "terrain.hpp"
 
 namespace hi {
@@ -23,9 +23,9 @@ struct World {
         terrain.generate();
         terrain.upload();
 
-        camera.position[0] = Terrain::CHUNKS_PER_X * Chunk::WIDTH / 2;
+        camera.position[0] = Terrain::CHUNKS_X * Chunk::WIDTH / 2;
         camera.position[1] = 40.f;
-        camera.position[2] = Terrain::CHUNKS_PER_Z * Chunk::DEPTH / 2;
+        camera.position[2] = Terrain::CHUNKS_Z * Chunk::DEPTH / 2;
     }
 
     inline ~World() noexcept {}
@@ -41,9 +41,11 @@ struct World {
     }
 
     inline void camera_rotate(int xoffset, int yoffset) noexcept {
-        camera.process_mouse_movement(xoffset, yoffset);
+        camera.process_mouse_movement(static_cast<float>(xoffset),
+                                      static_cast<float>(yoffset));
         camera.look_at(view);
     }
+
     inline void draw() const noexcept {
         terrain.draw(projection, view, camera.position);
     }

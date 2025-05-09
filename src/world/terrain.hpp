@@ -1,9 +1,12 @@
 #pragma once
 
+#include "../engine/opengl.hpp"
+
+#include "../external/PerlinNoise.hpp"
+#include "../external/linmath.hpp"
+
 #include "chunk.hpp"
-#include "external/PerlinNoise.hpp"
-#include "external/linmath.hpp"
-#include "opengl.hpp"
+
 #include <assert.h>
 #include <stdint.h>
 
@@ -17,12 +20,11 @@ struct Vertex {
 struct Terrain {
     siv::PerlinNoise noise{};
 
-    static constexpr unsigned CHUNKS_PER_X = 4;
-    static constexpr unsigned CHUNKS_PER_Y = 4;
-    static constexpr unsigned CHUNKS_PER_Z = 4;
+    static constexpr unsigned CHUNKS_X = 4;
+    static constexpr unsigned CHUNKS_Y = 4;
+    static constexpr unsigned CHUNKS_Z = 4;
 
-    static constexpr unsigned CHUNKS_COUNT =
-        CHUNKS_PER_X * CHUNKS_PER_Y * CHUNKS_PER_Z;
+    static constexpr unsigned CHUNKS_COUNT = CHUNKS_X * CHUNKS_Y * CHUNKS_Z;
 
     static constexpr size_t BLOCKS_TOTAL =
         Chunk::BLOCKS_PER_CHUNK * CHUNKS_COUNT;
@@ -64,7 +66,7 @@ struct Terrain {
     void draw(const math::mat4x4 projection, const math::mat4x4 view,
               const math::vec3 camera_pos) const noexcept;
 
-    static constexpr size_t get_size() noexcept {
+    static consteval size_t size() noexcept {
         return BLOCKS_TOTAL * sizeof(Block);
     }
 

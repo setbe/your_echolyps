@@ -1,46 +1,43 @@
 #pragma once
 
-#include "external/glad.hpp"
-#include "world.hpp"
+#include "../external/glad.hpp"
+#include "../world/world.hpp"
 
-#include "higui/higui.hpp"
-#include "higui/higui_glyph.hpp"
+#include "../higui/glyph.hpp"
+#include "../higui/higui.hpp"
 
-#include "fonts.hpp"
+#include "../resources/fonts.hpp"
 #include "opengl.hpp"
-
-using Handler = hi::window::Handler;
 
 namespace hi {
 struct Engine;
-}
+
+struct Font {
+    unsigned char *font_bitmap;
+    constexpr static unsigned font_memory_size = FONT_ATLAS_W * FONT_ATLAS_H;
+
+    inline explicit Font() noexcept
+        : font_bitmap{
+              static_cast<unsigned char *>(hi::alloc(font_memory_size))} {
+
+        if (!font_bitmap)
+            panic(Result{Stage::Engine, Error::FontMemoryAlloc});
+
+        decompress_font_bitmap(font_bitmap);
+    }
+
+    inline ~Font() noexcept { hi::free(font_bitmap, font_memory_size); }
+
+    Font(const Font &) = delete;
+    Font &operator=(const Font &) = delete;
+    Font(Font &&) = delete;
+    Font &operator=(Font &&) = delete;
+}; // struct Font
+} // namespace hi
 
 // ===== Engine: Connects all shit together
 // =====
 struct hi::Engine {
-    struct Font {
-        unsigned char *font_bitmap;
-        constexpr static unsigned font_memory_size =
-            FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT;
-
-        inline explicit Font() noexcept
-            : font_bitmap{
-                  static_cast<unsigned char *>(hi::alloc(font_memory_size))} {
-
-            if (!font_bitmap)
-                panic(Result{Stage::Engine, Error::FontMemoryAlloc});
-
-            decompress_font_bitmap(font_bitmap);
-        }
-
-        inline ~Font() noexcept { hi::free(font_bitmap, font_memory_size); }
-
-        Font(const Font &) = delete;
-        Font &operator=(const Font &) = delete;
-        Font(Font &&) = delete;
-        Font &operator=(Font &&) = delete;
-    }; // struct Font
-
     struct Config {
         int width{};
         int height{};

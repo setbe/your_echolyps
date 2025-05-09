@@ -1,5 +1,5 @@
 #ifdef _WIN32
-#include "higui_types.hpp"
+#include "types.hpp"
 
 #define HIGUI_WINDOW_CLASSNAME L" "
 #define WIN32_LEAN_AND_MEAN
@@ -18,7 +18,7 @@
 extern "C" const int _fltused = 0;
 
 namespace hi {
-// Key states (pressed � true, otherwise � false)
+// Key states (pressed = true, otherwise false)
 unsigned key[256] = {0};
 } // namespace hi
 

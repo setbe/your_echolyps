@@ -1,10 +1,12 @@
 #include "terrain.hpp"
-#include "texturepack.hpp"
+
+#include "../resources/shaders.hpp" // for `terrain_vert`, `terrain_frag`
+#include "../resources/texturepack.hpp"
 
 namespace hi {
 
 Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
-    data = static_cast<Block *>(hi::alloc(get_size()));
+    data = static_cast<Block *>(hi::alloc(size()));
     mesh_buffer = static_cast<Vertex *>(hi::alloc(current_buffer_capacity));
     index_buffer = static_cast<GLuint *>(
         hi::alloc(current_index_capacity * sizeof(GLuint)));
@@ -52,21 +54,24 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
 }
 
 Terrain::~Terrain() noexcept {
-    hi::free(data, get_size());
+    hi::free(data, size());
     hi::free(mesh_buffer, current_buffer_capacity);
     hi::free(index_buffer, current_index_capacity * sizeof(GLuint));
 }
 
 Block Terrain::get_block_at(int gx, int gy, int gz) const noexcept {
-    if (gx < 0 || gy < 0 || gz < 0 || gx >= CHUNKS_PER_X * Chunk::WIDTH ||
-        gy >= CHUNKS_PER_Y * Chunk::HEIGHT || gz >= CHUNKS_PER_Z * Chunk::DEPTH)
+    if (gx < 0 || gy < 0 || gz < 0 || gx >= CHUNKS_X * Chunk::WIDTH ||
+        gy >= CHUNKS_Y * Chunk::HEIGHT || gz >= CHUNKS_Z * Chunk::DEPTH)
         return {0, 0, 0, 0};
+
+    // g - global
+    // c - chunk
+    // l - local
 
     unsigned cx = gx / Chunk::WIDTH;
     unsigned cy = gy / Chunk::HEIGHT;
     unsigned cz = gz / Chunk::DEPTH;
-    unsigned chunk_index =
-        cx + cy * CHUNKS_PER_X + cz * CHUNKS_PER_X * CHUNKS_PER_Y;
+    unsigned chunk_index = cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
 
     unsigned lx = gx % Chunk::WIDTH;
     unsigned ly = gy % Chunk::HEIGHT;
@@ -124,19 +129,17 @@ void Terrain::emit_face(unsigned &idx, float x, float y, float z, int face,
     uint32_t tex = bid + off;
     uint32_t tx = tex % TILES_PER_ROW, ty = tex / TILES_PER_ROW;
 
-    float packed = block.to_float();
-
     for (int i = 0; i < 6; ++i) {
         Vertex &vertex = mesh_buffer[idx];
         vertex.position_block[0] = x + POS[i * 3 + 0];
         vertex.position_block[1] = y + POS[i * 3 + 1];
         vertex.position_block[2] = z + POS[i * 3 + 2];
-        vertex.position_block[3] = packed;
+        vertex.position_block[3] = block.to_float();
 
-        float u = float(tx) + FACE_UVS[i * 2 + 0];
-        float v = float(ty) + FACE_UVS[i * 2 + 1];
-        vertex.uv[0] = u / float(TILES_PER_ROW);
-        vertex.uv[1] = v / float(TILES_PER_ROW);
+        float u = static_cast<float>(tx) + FACE_UVS[i * 2 + 0];
+        float v = static_cast<float>(ty) + FACE_UVS[i * 2 + 1];
+        vertex.uv[0] = u / static_cast<float>(TILES_PER_ROW);
+        vertex.uv[1] = v / static_cast<float>(TILES_PER_ROW);
 
         index_buffer[used_indices++] = idx++;
     }
@@ -152,11 +155,10 @@ void Terrain::bind_vertex_attributes() const noexcept {
 }
 
 void Terrain::generate_block_data() noexcept {
-    for (unsigned cz = 0; cz < CHUNKS_PER_Z; ++cz)
-        for (unsigned cy = 0; cy < CHUNKS_PER_Y; ++cy)
-            for (unsigned cx = 0; cx < CHUNKS_PER_X; ++cx) {
-                unsigned i =
-                    cx + cy * CHUNKS_PER_X + cz * CHUNKS_PER_X * CHUNKS_PER_Y;
+    for (unsigned cz = 0; cz < CHUNKS_Z; ++cz)
+        for (unsigned cy = 0; cy < CHUNKS_Y; ++cy)
+            for (unsigned cx = 0; cx < CHUNKS_X; ++cx) {
+                unsigned i = cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
                 Block *dst = &data[i * Chunk::BLOCKS_PER_CHUNK];
                 Chunk::generate_chunk(cx, cy, cz, dst, noise);
             }
@@ -168,16 +170,16 @@ void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
     unsigned base_vertex = used_vertices;
     unsigned count = 0;
 
-    unsigned chunk_base = chunk_index * Chunk::BLOCKS_PER_CHUNK;
-    unsigned cx = chunk_index % CHUNKS_PER_X;
-    unsigned cy = (chunk_index / CHUNKS_PER_X) % CHUNKS_PER_Y;
-    unsigned cz = chunk_index / (CHUNKS_PER_X * CHUNKS_PER_Y);
+    unsigned c_base = chunk_index * Chunk::BLOCKS_PER_CHUNK;
+    unsigned cx = chunk_index % CHUNKS_X;
+    unsigned cy = (chunk_index / CHUNKS_X) % CHUNKS_Y;
+    unsigned cz = chunk_index / (CHUNKS_X * CHUNKS_Y);
 
-    for (unsigned z = 0; z < Chunk::DEPTH; ++z) {
-        for (unsigned y = 0; y < Chunk::HEIGHT; ++y) {
+    for (unsigned z = 0; z < Chunk::DEPTH; ++z)
+        for (unsigned y = 0; y < Chunk::HEIGHT; ++y)
             for (unsigned x = 0; x < Chunk::WIDTH; ++x) {
                 unsigned local_index = Chunk::calculate_block_index(x, y, z);
-                Block blk = data[chunk_base + local_index];
+                Block blk = data[c_base + local_index];
                 if (blk.block_id() == BlockList::Air.block_id())
                     continue;
 
@@ -196,8 +198,6 @@ void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
                     }
                 }
             }
-        }
-    }
 
     chunk_meshes[chunk_index] = {base_vertex, count, float(cx * Chunk::WIDTH),
                                  float(cy * Chunk::HEIGHT),

@@ -13,7 +13,7 @@ typedef char *LPSTR;
                       LPSTR lpCmdLine, int nCmdShow)
 #endif
 
-#include "higui_types.hpp"
+#include "types.hpp"
 #include <assert.h>
 #include <cstddef>
 
@@ -25,7 +25,7 @@ void trim_working_set() noexcept;
 void *alloc(size_t size) noexcept;
 
 // Release OS memory back
-void free(void *ptr, size_t size) noexcept;
+void free(void *ptr, size_t size_in_bytes) noexcept;
 
 // Forced current process exit
 int exit(int) noexcept;

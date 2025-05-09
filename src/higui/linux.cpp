@@ -1,7 +1,8 @@
-#include "higui_debug.hpp"
-#include "higui_platform.hpp"
-#include "higui_types.hpp"
+#include "debug.hpp"
+#include "platform.hpp"
+#include "types.hpp"
 
+#include "../external/glad.hpp"
 #include <GL/glx.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>

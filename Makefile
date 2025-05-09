@@ -1,7 +1,15 @@
-.PHONY: all shaders clean run release public
+.PHONY: all shaders font textures clean run release public mini
 
 CXX = g++
 
+SRC_DIR = src
+BUILD_DIR = build
+TARGET = $(BUILD_DIR)/echolyps
+
+SRC_FILES := $(shell find $(SRC_DIR) -type f \( -name "*.cpp" -o -name "*.c" \))
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
+
+# Compilation flags
 DEBUG_CXXFLAGS = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
   -std=c++20 -O3 -DNDEBUG \
@@ -12,30 +20,35 @@ RELEASE_CXXFLAGS = \
   -fno-ident
 
 PUBLIC_CXXFLAGS = \
-  -std=c++20  -O2 -DNDEBUG -DHI_PUBLIC \
+  -std=c++20 -O2 -DNDEBUG -DHI_PUBLIC \
   -flto -fomit-frame-pointer \
   -fno-exceptions -fno-use-cxa-atexit \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -fno-ident
 
+MINI_CXXFLAGS = \
+  -std=c++20 -Os -DNDEBUG \
+  -flto -ffreestanding -fomit-frame-pointer \
+  -fno-exceptions -fno-use-cxa-atexit \
+  -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
+  -fno-ident -march=native
+
+# Linker flags
 DEBUG_LDFLAGS = -lX11 -lGL -ldl
 RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
 PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
-
-SRC_DIR = src
-BUILD_DIR = build
-TARGET = $(BUILD_DIR)/echolyps
-
-SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
-OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
+MINI_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
 
 default: shaders clean run
 
 shaders:
 	$(MAKE) -C resources/shaders
-  
+
 font:
-	cd resources/fonts/ && make
+	$(MAKE) -C resources/fonts
+
+textures:
+	$(MAKE) -C resources/textures
 
 all: CXXFLAGS = $(DEBUG_CXXFLAGS)
 all: LDFLAGS = $(DEBUG_LDFLAGS)
@@ -48,6 +61,15 @@ release: $(BUILD_DIR) $(TARGET)
 public: CXXFLAGS = $(PUBLIC_CXXFLAGS)
 public: LDFLAGS = $(PUBLIC_LDFLAGS)
 public: $(BUILD_DIR) $(TARGET)
+
+mini: CXXFLAGS = $(MINI_CXXFLAGS)
+mini: LDFLAGS = $(MINI_LDFLAGS)
+mini: $(BUILD_DIR) $(OBJ_FILES)
+	mkdir -p $(dir $(TARGET))
+	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) $(LDFLAGS)
+	strip --strip-all $(TARGET)
+	objcopy --remove-section=.comment --remove-section=.note $(TARGET)
+	upx --best --ultra-brute $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)

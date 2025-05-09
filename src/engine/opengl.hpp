@@ -1,13 +1,7 @@
 #pragma once
 
-#include "external/glad.hpp"
-#include "external/linmath.hpp"
-
-#include "higui/higui_platform.hpp"
-#include "higui/higui_types.hpp"
-
-#include "fonts.hpp"
-#include "shaders.hpp"
+#include "../external/glad.hpp"
+#include "../higui/higui.hpp" // for `window::load_gl()`, `hi::Callback` and error handling
 
 namespace hi {
 // returns the program, guarantees error handling
@@ -152,5 +146,5 @@ struct Opengl {
                                    int height) const noexcept {
         glViewport(0, 0, width, height);
     }
-};
+}; // struct Opengl
 } // namespace hi

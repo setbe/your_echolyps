@@ -1,7 +1,7 @@
-#pragma once
+// For now simply provides macro `debug_print` which will be ignored if
+/// not defined NDEBUG
 
-#include "higui_platform.hpp"
-#include "higui_types.hpp"
+#pragma once
 
 #if !defined(NDEBUG) || defined(HI_PUBLIC)
 

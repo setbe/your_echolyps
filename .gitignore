@@ -4,18 +4,19 @@
 /vs/.vs
 /vs/build
 
-/src/shaders.hpp
+src/resources/shaders.hpp
+src/resources/fonts.hpp
+src/resources/texturepack.hpp
+src/resources/texturepack.png
+
 /resources/shaders/vs/.vs
 /resources/shaders/vs/.vscode
 /resources/shaders/vs/build
 
-/src/fonts.hpp
 /resources/fonts/vs/.vs
 /resources/fonts/vs/.vscode
 /resources/fonts/vs/build
 
-/src/texturepack.hpp
-/src/texturepack.png
 /resources/textures/vs/.vs
 /resources/textures/vs/.vscode
 /resources/textures/vs/build
