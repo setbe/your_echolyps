@@ -18,9 +18,8 @@ struct World {
     Terrain terrain;
 
     inline explicit World() noexcept : terrain{}, camera{} {
-        terrain.generate_block_data();
-
-        terrain.generate();
+        terrain.gen_data_all();
+        terrain.gen_mesh_all();
         terrain.upload();
 
         camera.position[0] = Terrain::CHUNKS_X * Chunk::WIDTH / 2;

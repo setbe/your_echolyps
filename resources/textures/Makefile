@@ -1,13 +1,20 @@
 # ==== texturepacks ====
 
-TEXTUREPACK_DEFAULT = default
+T_DEFAULT = default
 
-# ==== texturepacks ====
+# ==== palettes ====
+
+P_SOLARIAN = solarian24.png
+P_QUAKE2 = quake-2.png
+
 # ==== settings ====
 
-TEXTURES_ARGS = $(TEXTUREPACK_DEFAULT)
+TEXTUREPACK = $(T_DEFAULT)
+PALETTE = $(P_QUAKE2)
 
-# ==== settings ====
+TEXTURES_ARGS = $(TEXTUREPACK) $(PALETTE)
+
+# ==== settings end ====
 
 CXX = g++
 

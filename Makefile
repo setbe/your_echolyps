@@ -69,7 +69,9 @@ mini: $(BUILD_DIR) $(OBJ_FILES)
 	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(TARGET) $(LDFLAGS)
 	strip --strip-all $(TARGET)
 	objcopy --remove-section=.comment --remove-section=.note $(TARGET)
-	upx --best --ultra-brute $(TARGET)
+	upx --best --ultra-brute $(TARGET) -o $(TARGET)_ultra-brute
+	upx --best --brute $(TARGET) -o$(TARGET)_brute
+	upx --best --lzma $(TARGET) -o$(TARGET)_lzma
 
 $(TARGET): $(OBJ_FILES)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)

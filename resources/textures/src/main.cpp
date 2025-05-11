@@ -1,3 +1,4 @@
+// main.cpp
 #include "../../../src/external/miniz.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -10,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -44,6 +46,19 @@ Image load_or_empty(const fs::path &filepath, int tile_w, int tile_h) {
         stbi_image_free(pixels);
     std::cerr << "Warning: Missing or invalid texture: " << filepath << "\n";
     return {tile_w, tile_h, std::vector<unsigned char>(tile_w * tile_h * 4, 0)};
+}
+
+Image load_palette(const fs::path &path) {
+    int w, h, channels;
+    unsigned char *pixels =
+        stbi_load(path.string().c_str(), &w, &h, &channels, 3);
+    if (!pixels) {
+        std::cerr << "Error: Cannot load palette: " << path << "\n";
+        exit(1);
+    }
+    std::vector<unsigned char> data(pixels, pixels + w * h * 3);
+    stbi_image_free(pixels);
+    return {w, h, std::move(data)};
 }
 
 unsigned nextPowerOfTwo(unsigned n) {
@@ -93,8 +108,7 @@ void write_texturepack_hpp(const fs::path &output_path,
     out << "constexpr unsigned TEXTUREPACK_ATLAS_WIDTH = " << width << ";\n";
     out << "constexpr unsigned TEXTUREPACK_ATLAS_HEIGHT = " << height << ";\n";
     out << "constexpr size_t TEXTUREPACK_DECOMPRESSED_SIZE = "
-           "TEXTUREPACK_ATLAS_WIDTH * "
-           "TEXTUREPACK_ATLAS_HEIGHT * 4;\n\n";
+           "TEXTUREPACK_ATLAS_WIDTH * TEXTUREPACK_ATLAS_HEIGHT * 4;\n\n";
 
     out << "constexpr unsigned char compressed_atlas[] = {";
     for (size_t i = 0; i < compressed.size(); ++i)
@@ -107,43 +121,86 @@ void write_texturepack_hpp(const fs::path &output_path,
 })" << "\n";
 }
 
+inline void
+to_nearest_palette_color(unsigned char &r, unsigned char &g, unsigned char &b,
+                         const std::vector<unsigned char> &palette) {
+    int best_dist = std::numeric_limits<int>::max();
+    size_t best_index = 0;
+    for (size_t i = 0; i + 2 < palette.size(); i += 3) {
+        int dr = int(r) - int(palette[i + 0]);
+        int dg = int(g) - int(palette[i + 1]);
+        int db = int(b) - int(palette[i + 2]);
+        int dist = std::abs(dr) + std::abs(dg) + std::abs(db); // manhattan
+        if (dist < best_dist) {
+            best_dist = dist;
+            best_index = i;
+        }
+    }
+    r = palette[best_index + 0];
+    g = palette[best_index + 1];
+    b = palette[best_index + 2];
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: packer <texturepack_name>\n";
+        std::cerr << "Usage: packer <texturepack_name> [palette.png]\n";
         return 1;
     }
+
     fs::path current_dir = fs::current_path();
     fs::path texturepack_dir = current_dir / "texturepacks" / argv[1];
+
     if (!fs::exists(texturepack_dir)) {
         std::cerr << "Error: Texturepack not found: " << texturepack_dir
                   << "\n";
         return 1;
     }
 
+    std::vector<unsigned char> palette_data;
+    if (argc >= 3) {
+        fs::path palette_path = current_dir / "palettes" / argv[2];
+        if (!fs::exists(palette_path)) {
+            std::cerr << "Error: Palette file not found: " << palette_path
+                      << "\n";
+            return 1;
+        }
+        auto pal = load_palette(palette_path);
+        palette_data = std::move(pal.data);
+        std::cout << "Palette loaded: " << argv[2] << "\n";
+    }
+
     const int tile_w = 16, tile_h = 16;
     size_t total_tiles = blocks.size() + items.size();
-    int per_row = static_cast<int>(
-        std::ceil(std::sqrt(static_cast<double>(total_tiles))));
+    int per_row = static_cast<int>(std::ceil(std::sqrt((double)total_tiles)));
     unsigned atlas_size = nextPowerOfTwo(per_row * tile_w);
     unsigned atlas_w = atlas_size, atlas_h = atlas_size;
     std::vector<unsigned char> atlas(atlas_w * atlas_h * 4, 0);
 
     auto blit = [&](const Image &img, size_t idx) {
-        int row = static_cast<int>(idx) / per_row;
-        int col = static_cast<int>(idx) % per_row;
+        int row = int(idx) / per_row;
+        int col = int(idx) % per_row;
         for (int y = 0; y < tile_h; ++y) {
             for (int x = 0; x < tile_w; ++x) {
-                for (int ch = 0; ch < 4; ++ch) {
-                    size_t dst =
-                        ((row * tile_h + y) * atlas_w + (col * tile_w + x)) *
-                            4 +
-                        ch;
-                    size_t src = (y * tile_w + x) * 4 + ch;
-                    atlas[dst] = img.data[src];
-                }
+                size_t src = (y * tile_w + x) * 4;
+                size_t dst =
+                    ((row * tile_h + y) * atlas_w + (col * tile_w + x)) * 4;
+
+                unsigned char r = img.data[src + 0];
+                unsigned char g = img.data[src + 1];
+                unsigned char b = img.data[src + 2];
+                unsigned char a = img.data[src + 3];
+
+                if (!palette_data.empty())
+                    to_nearest_palette_color(r, g, b, palette_data);
+
+                atlas[dst + 0] = r;
+                atlas[dst + 1] = g;
+                atlas[dst + 2] = b;
+                atlas[dst + 3] = a;
             }
         }
     };
+
     for (size_t i = 0; i < blocks.size(); ++i) {
         blit(load_or_empty(texturepack_dir / "blocks" / blocks[i], tile_w,
                            tile_h),
@@ -161,11 +218,8 @@ int main(int argc, char *argv[]) {
         current_dir / ".." / ".." / "src" / "resources" / "texturepack.png";
 
     stbi_flip_vertically_on_write(flip_vertical);
-    if (!stbi_write_png(output_png.string().c_str(), atlas_w, atlas_h, 4,
-                        atlas.data(), atlas_w * 4)) {
-        std::cerr << "Error: Failed to write PNG: " << output_png << "\n";
-        return 1;
-    }
+    stbi_write_png(output_png.string().c_str(), atlas_w, atlas_h, 4,
+                   atlas.data(), atlas_w * 4);
     std::cout << "PNG atlas written to: " << output_png << "\n";
 
     std::vector<unsigned char> compressed = compress_with_miniz(atlas);

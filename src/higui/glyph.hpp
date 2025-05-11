@@ -1,11 +1,15 @@
 #pragma once
 
+#ifndef HIGUI_GLYPH_USE_STATIC_DRAW
+#define HIGUI_GLYPH_DRAW_USAGE GL_DYNAMIC_DRAW
+#else
+#define HIGUI_GLYPH_DRAW_USAGE GL_STATIC_DRAW
+#endif
+
 #include "../engine/opengl.hpp"
-
-#include "types.hpp"
-
 #include "../resources/fonts.hpp"
-#include "../resources/shaders.hpp" // for `text_shader_vert` and `text_shader_frag`
+#include "../resources/shaders.hpp"
+#include "types.hpp"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -46,6 +50,7 @@ struct TextRenderer {
         if (!decompress_font_glyphs(font_glyphs))
             panic(Result{Stage::Engine, Error::FontDecompressMemoryAlloc});
     }
+
     inline ~TextRenderer() noexcept { hi::free(font_glyphs, FONT_GLYPHS_SIZE); }
 
     TextRenderer(const TextRenderer &) = delete;
@@ -75,7 +80,7 @@ struct TextRenderer {
             return ((c & 0x07) << 18) | ((c2 & 0x3F) << 12) |
                    ((c3 & 0x3F) << 6) | (c4 & 0x3F);
         }
-        return 0xFFFD; // replacement character
+        return 0xFFFD;
     }
 
     inline void init(const unsigned char *pixels,
@@ -83,7 +88,6 @@ struct TextRenderer {
         text_atlas_location =
             glGetUniformLocation(shader_program.get(), sampler_name);
 
-        // Configure texture
         glBindTexture(GL_TEXTURE_2D, text_atlas.get());
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, FONT_ATLAS_W, FONT_ATLAS_H, 0,
                      GL_RED, GL_UNSIGNED_BYTE, pixels);
@@ -92,16 +96,15 @@ struct TextRenderer {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        // Buffers
         vao.bind();
 
         vbo.bind(GL_ARRAY_BUFFER);
         vbo.buffer_data(GL_ARRAY_BUFFER, sizeof(vertices), nullptr,
-                        GL_DYNAMIC_DRAW);
+                        HIGUI_GLYPH_DRAW_USAGE);
 
         ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
         ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), nullptr,
-                        GL_DYNAMIC_DRAW);
+                        HIGUI_GLYPH_DRAW_USAGE);
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
@@ -133,5 +136,4 @@ struct TextRenderer {
                        GL_UNSIGNED_INT, nullptr);
     }
 };
-
 } // namespace hi

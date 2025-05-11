@@ -245,3 +245,6 @@ constexpr int jouyou_kanji_codepoints[] = {
     0x67A0, 0x6E7E,  0x8155,
 
 };
+
+constexpr unsigned jouyou_kanji_count =
+    sizeof(jouyou_kanji_codepoints) / sizeof(int);

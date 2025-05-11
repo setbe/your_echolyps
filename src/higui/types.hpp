@@ -68,8 +68,11 @@ enum class Stage : unsigned {
 
 enum class Error : unsigned {
     None,
+
+    // Alloc Memory
     InternalMemoryAlloc,
     FontMemoryAlloc,
+    FontBitmapDecompress,
     FontGlyphsMemoryAlloc,
     FontDecompressMemoryAlloc,
     ChunkMemoryAlloc,

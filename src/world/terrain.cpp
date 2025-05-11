@@ -16,12 +16,12 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
 
     vbo.bind(GL_ARRAY_BUFFER);
     vbo.buffer_data(GL_ARRAY_BUFFER, current_buffer_capacity, nullptr,
-                    GL_DYNAMIC_DRAW);
+                    GL_STATIC_DRAW);
 
     ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
     ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER,
                     current_index_capacity * sizeof(GLuint), nullptr,
-                    GL_DYNAMIC_DRAW);
+                    GL_STATIC_DRAW);
 
     vao.bind();
     vbo.bind(GL_ARRAY_BUFFER);
@@ -33,11 +33,11 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     view_location = glGetUniformLocation(shader_program.get(), "view");
     atlas_location = glGetUniformLocation(shader_program.get(), "atlas");
 
-    constexpr unsigned texturepack_size =
+    constexpr unsigned TEXTUREPACK_SIZE =
         TEXTUREPACK_ATLAS_WIDTH * TEXTUREPACK_ATLAS_HEIGHT * 4;
 
     unsigned char *atlas_pixels =
-        static_cast<unsigned char *>(hi::alloc(texturepack_size));
+        static_cast<unsigned char *>(hi::alloc(TEXTUREPACK_SIZE));
     if (!atlas_pixels)
         hi::panic(Result{Stage::Game, Error::TexturepackMemoryAlloc});
 
@@ -50,7 +50,7 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                  TEXTUREPACK_ATLAS_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  atlas_pixels);
 
-    hi::free(atlas_pixels, texturepack_size);
+    hi::free(atlas_pixels, TEXTUREPACK_SIZE);
 }
 
 Terrain::~Terrain() noexcept {
@@ -60,13 +60,13 @@ Terrain::~Terrain() noexcept {
 }
 
 Block Terrain::get_block_at(int gx, int gy, int gz) const noexcept {
+    // g - Global
+    // c - Chunk
+    // l - Local
+
     if (gx < 0 || gy < 0 || gz < 0 || gx >= CHUNKS_X * Chunk::WIDTH ||
         gy >= CHUNKS_Y * Chunk::HEIGHT || gz >= CHUNKS_Z * Chunk::DEPTH)
         return {0, 0, 0, 0};
-
-    // g - global
-    // c - chunk
-    // l - local
 
     unsigned cx = gx / Chunk::WIDTH;
     unsigned cy = gy / Chunk::HEIGHT;
@@ -81,31 +81,9 @@ Block Terrain::get_block_at(int gx, int gy, int gz) const noexcept {
                 Chunk::calculate_block_index(lx, ly, lz)];
 }
 
-constexpr static float CUBE_POS[6][18] = {
-    // front  (z+):  BL(0,0,1), BR(1,0,1), TR(1,1,1),   BL, TR, TL
-    {0, 0, 1, 1, 0, 1, /* */ 1, 1, 1, 0, 0, 1, /* */ 1, 1, 1, 0, 1, 1},
-
-    // back   (z-):  BL(1,0,0), BR(0,0,0), TR(0,1,0),   BL, TR, TL
-    {1, 0, 0, 0, 0, 0, /* */ 0, 1, 0, 1, 0, 0, /* */ 0, 1, 0, 1, 1, 0},
-
-    // left   (x-): BL(0,0,0), BR(0,0,1), TR(0,1,1),   BL, TR, TL
-    {0, 0, 0, 0, 0, 1, /* */ 0, 1, 1, 0, 0, 0, /* */ 0, 1, 1, 0, 1, 0},
-
-    // right  (x+):  BL(1,0,1), BR(1,0,0), TR(1,1,0),   BL, TR, TL
-    {1, 0, 1, 1, 0, 0, /* */ 1, 1, 0, 1, 0, 1, /* */ 1, 1, 0, 1, 1, 1},
-
-    // top    (y+):  BL(0,1,1), BR(1,1,1), TR(1,1,0),   BL, TR, TL
-    {0, 1, 1, 1, 1, 1, /* */ 1, 1, 0, 0, 1, 1, /* */ 1, 1, 0, 0, 1, 0},
-
-    // bottom (y-):  BL(0,0,0), BR(1,0,0), TR(1,0,1),   BL, TR, TL
-    {0, 0, 0, 1, 0, 0, /* */ 1, 0, 1, 0, 0, 0, /* */ 1, 0, 1, 0, 0, 1},
-};
-
-constexpr static float FACE_UVS[12]{0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1};
-
 void Terrain::emit_face(unsigned &idx, float x, float y, float z, int face,
                         Block block) noexcept {
-    const float *POS = CUBE_POS[face];
+    const float *POS = Block::CUBE_POS[face];
 
     uint32_t mask = block.texture_protocol();
     uint32_t bid = block.block_id() - 1;
@@ -136,8 +114,8 @@ void Terrain::emit_face(unsigned &idx, float x, float y, float z, int face,
         vertex.position_block[2] = z + POS[i * 3 + 2];
         vertex.position_block[3] = block.to_float();
 
-        float u = static_cast<float>(tx) + FACE_UVS[i * 2 + 0];
-        float v = static_cast<float>(ty) + FACE_UVS[i * 2 + 1];
+        float u = static_cast<float>(tx) + Block::FACE_UVS[i * 2 + 0];
+        float v = static_cast<float>(ty) + Block::FACE_UVS[i * 2 + 1];
         vertex.uv[0] = u / static_cast<float>(TILES_PER_ROW);
         vertex.uv[1] = v / static_cast<float>(TILES_PER_ROW);
 
@@ -154,19 +132,19 @@ void Terrain::bind_vertex_attributes() const noexcept {
                           (void *)offsetof(Vertex, uv));
 }
 
-void Terrain::generate_block_data() noexcept {
+void Terrain::gen_data(unsigned cx, unsigned cy, unsigned cz) noexcept {
+    unsigned chunk_index = cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
+    Block *dst = &data[chunk_index * Chunk::BLOCKS_PER_CHUNK];
+    Chunk::generate_chunk(cx, cy, cz, dst, noise);
+}
+void Terrain::gen_data_all() noexcept {
     for (unsigned cz = 0; cz < CHUNKS_Z; ++cz)
         for (unsigned cy = 0; cy < CHUNKS_Y; ++cy)
-            for (unsigned cx = 0; cx < CHUNKS_X; ++cx) {
-                unsigned i = cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
-                Block *dst = &data[i * Chunk::BLOCKS_PER_CHUNK];
-                Chunk::generate_chunk(cx, cy, cz, dst, noise);
-            }
-
-    data[(int)(BLOCKS_TOTAL / 1.2f)] = BlockList::Tblock;
+            for (unsigned cx = 0; cx < CHUNKS_X; ++cx)
+                gen_data(cx, cy, cz);
 }
 
-void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
+void Terrain::gen_mesh(unsigned chunk_index) noexcept {
     unsigned base_vertex = used_vertices;
     unsigned count = 0;
 
@@ -204,11 +182,11 @@ void Terrain::generate_chunk_mesh(unsigned chunk_index) noexcept {
                                  float(cz * Chunk::DEPTH)};
 }
 
-void Terrain::generate() noexcept {
+void Terrain::gen_mesh_all() noexcept {
     used_vertices = 0;
     used_indices = 0;
     for (unsigned i = 0; i < CHUNKS_COUNT; ++i)
-        generate_chunk_mesh(i);
+        gen_mesh(i);
 }
 
 void Terrain::upload() noexcept {
@@ -217,7 +195,7 @@ void Terrain::upload() noexcept {
                  mesh_buffer);
     ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
     ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, used_indices * sizeof(GLuint),
-                    index_buffer, GL_DYNAMIC_DRAW);
+                    index_buffer, GL_STATIC_DRAW);
 }
 
 void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,

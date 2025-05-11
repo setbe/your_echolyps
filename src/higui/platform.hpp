@@ -32,14 +32,14 @@ int exit(int) noexcept;
 
 void panic(Result) noexcept;
 
-void panic_notify(Error, const char *msg) noexcept;
+void panic_notify(const char *msg) noexcept;
 void sleep(unsigned ms) noexcept;
 
 // returns seconds
 double time() noexcept;
 
-// returns time for previous draw call
-double delta_time() noexcept;
+// returns time in seconds for previous draw call
+double calculate_delta_time() noexcept;
 
 // ===== Contains all info related to crossplatform window management =====
 namespace window {

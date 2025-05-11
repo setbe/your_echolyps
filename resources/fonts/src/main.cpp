@@ -2,6 +2,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../../src/external/miniz.hpp"
 #include "external/stb_truetype.h"
+#include "jouyou_kanji.hpp"
 
 #include <algorithm>
 #include <array>
@@ -45,7 +46,14 @@ std::vector<int> get_codepoints(const std::string &lang) {
         add(ranges_en);
     else if (lang == "ua")
         add(ranges_ua);
-    else
+    else if (lang == "jp") {
+        cps.insert(cps.end(), jouyou_kanji_codepoints,
+                   jouyou_kanji_codepoints + jouyou_kanji_count);
+        for (int c = 0x3040; c <= 0x309F; ++c) // Hiragana
+            cps.push_back(c);
+        for (int c = 0x30A0; c <= 0x30FF; ++c) // Katakana
+            cps.push_back(c);
+    } else
         throw std::runtime_error("Unknown lang: " + lang);
     return cps;
 }
@@ -124,20 +132,14 @@ bool pack_glyphs(const std::vector<int> &cps,
     return false;
 }
 
-std::vector<unsigned char> rle_zero(const std::vector<unsigned char> &data) {
-    std::vector<unsigned char> out;
-    for (size_t i = 0; i < data.size();) {
-        if (data[i] == 0) {
-            size_t run = 1;
-            while (i + run < data.size() && data[i + run] == 0 && run < 255)
-                ++run;
-            out.push_back(0);
-            out.push_back((unsigned char)run);
-            i += run;
-        } else {
-            out.push_back(data[i++]);
-        }
-    }
+std::vector<unsigned char>
+compress_with_miniz(const std::vector<unsigned char> &input) {
+    size_t bound = mz_compressBound(input.size());
+    std::vector<unsigned char> out(bound);
+    mz_ulong out_len = bound;
+    if (mz_compress(out.data(), &out_len, input.data(), input.size()) != Z_OK)
+        throw std::runtime_error("miniz compression failed");
+    out.resize(out_len);
     return out;
 }
 
@@ -195,7 +197,10 @@ int main(int c, char **v) {
         }
         if (bp)
             bits.push_back(cb);
-        auto zr = rle_zero(bits);
+
+        size_t bit_bytes = bits.size();
+        std::vector<unsigned char> compressed_bitmap =
+            compress_with_miniz(bits);
 
         std::vector<uint32_t> raw;
         raw.reserve(info.size() * 3);
@@ -229,26 +234,23 @@ int main(int c, char **v) {
         o << "constexpr int FONT_ATLAS_H = " << H << ";\n";
         o << "constexpr unsigned FONT_COUNT = " << (raw.size() / 3) << ";\n\n";
 
+        o << "constexpr size_t FONT_BITMAP_BITS_SIZE = " << bit_bytes << ";\n";
         o << "constexpr unsigned char compressed_font_bitmap[] = {";
-        for (size_t i = 0; i < zr.size(); ++i)
-            o << int(zr[i]) << (i + 1 < zr.size() ? "," : "");
+        for (size_t i = 0; i < compressed_bitmap.size(); ++i)
+            o << int(compressed_bitmap[i])
+              << (i + 1 < compressed_bitmap.size() ? "," : "");
         o << "};\n\n";
 
-        o << R"(inline void decompress_font_bitmap(uint8_t* out) noexcept {
-    const auto* in = compressed_font_bitmap;
-    size_t i = 0, N = sizeof(compressed_font_bitmap);
-    while (i < N) {
-        uint8_t b = in[i++];
-        if (b == 0 && i < N) {
-            uint8_t cnt = in[i++];
-            for (int r = 0; r < cnt; ++r)
-                for (int k = 0; k < 8; ++k)
-                    *out++ = 0;
-        } else {
-            for (int k = 0; k < 8; ++k)
-                *out++ = (b & (1 << (7 - k))) ? 255 : 0;
-        }
+        o << R"(inline bool decompress_font_bitmap(uint8_t* out) noexcept {
+    static uint8_t tmp[FONT_BITMAP_BITS_SIZE];
+    size_t sz = FONT_BITMAP_BITS_SIZE;
+    if (mz_uncompress(tmp, &sz, compressed_font_bitmap, sizeof(compressed_font_bitmap)) != Z_OK)
+        return false;
+    for (size_t i = 0; i < FONT_ATLAS_W * FONT_ATLAS_H; ++i) {
+        uint8_t b = tmp[i / 8];
+        out[i] = (b & (1 << (7 - (i % 8)))) ? 255 : 0;
     }
+    return true;
 })" << "\n\n";
 
         o << "struct GlyphInfoPacked { uint32_t x_y; int32_t w_h_adv_ox_oy; "

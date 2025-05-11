@@ -59,9 +59,12 @@ struct Terrain {
     Terrain() noexcept;
     ~Terrain() noexcept;
 
-    void generate_block_data() noexcept;
-    void generate_chunk_mesh(unsigned chunk_index) noexcept;
-    void generate() noexcept;
+    void gen_data(unsigned cx, unsigned cy, unsigned cz) noexcept;
+    void gen_data_all() noexcept;
+
+    void gen_mesh(unsigned chunk_index) noexcept;
+    void gen_mesh_all() noexcept;
+
     void upload() noexcept;
     void draw(const math::mat4x4 projection, const math::mat4x4 view,
               const math::vec3 camera_pos) const noexcept;

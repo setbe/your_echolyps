@@ -1,3 +1,4 @@
+#define HIGUI_GLYPH_USE_STATIC_DRAW
 #include "engine/engine.hpp"
 
 inline static bool show_debug_menu = false;
@@ -8,8 +9,10 @@ void hi::Engine::start() noexcept {
 }
 
 void hi::Engine::update() noexcept {
-    double dt = hi::delta_time();
+    double dt = hi::calculate_delta_time();
     static float simple_timer{0.f};
+
+    // Render debug menu in the game
     if (show_debug_menu) {
         simple_timer += dt;
         if (simple_timer > 0.1f) {
@@ -29,6 +32,7 @@ void hi::Engine::update() noexcept {
 
     bool should_update_view = false;
 
+    // Movement
     if (key::Control_L)
         world.camera.movement_speed = 50.f;
     else

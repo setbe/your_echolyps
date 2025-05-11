@@ -36,7 +36,7 @@ static void write_err(const char *s) noexcept {
     write(STDERR_FILENO, s, strlen(s));
 }
 
-void panic_notify(Error /*error*/, const char *msg) noexcept {
+void panic_notify(const char *msg) noexcept {
     write_err(msg);
     write_err("\n");
     __builtin_trap(); // asm "ud2"
@@ -46,6 +46,9 @@ void panic(Result result) noexcept {
     static_assert(sizeof(Result) == 8U);
     static_assert(sizeof(Stage) == 4U);
     static_assert(sizeof(Error) == 4U);
+    static_assert(static_cast<unsigned char>(Stage::__Max__) == 100U);
+    static_assert(static_cast<unsigned char>(Error::__Max__) == 100U);
+
     char buf[16] = "Crash: S00 C00\n";
     unsigned s = (unsigned)result.stage % 100;
     unsigned e = (unsigned)result.error % 100;
@@ -53,7 +56,7 @@ void panic(Result result) noexcept {
     buf[9] = '0' + (s % 10);
     buf[12] = '0' + (e / 10);
     buf[13] = '0' + (e % 10);
-    panic_notify(result.error, buf);
+    panic_notify(buf);
 }
 
 void sleep(unsigned ms) noexcept {
@@ -69,7 +72,7 @@ double time() noexcept {
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
-double delta_time() noexcept {
+double calculate_delta_time() noexcept {
     static double last_time = hi::time();
     double current_time = hi::time();
     double delta = current_time - last_time;

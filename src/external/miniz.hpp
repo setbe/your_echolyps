@@ -626,7 +626,6 @@ typedef void *const voidpc;
 #pragma once
 #include <assert.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* ------------------- Types and macros */

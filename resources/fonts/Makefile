@@ -5,7 +5,7 @@ FONT_UNSCII = unscii/unscii-16-full.ttf
 # ==== fonts ====
 # ==== settings ====
 
-FONT_ARGS = --size=16 --$(FONT_UNSCII)-en --$(FONT_UNSCII)-ua # --$(FONT_UNSCII)-jp
+FONT_ARGS = --size=16 --$(FONT_UNSCII)-en --$(FONT_UNSCII)-ua #--$(FONT_UNSCII)-jp
 
 # ==== settings ====
 

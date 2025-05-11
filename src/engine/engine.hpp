@@ -23,7 +23,8 @@ struct Font {
         if (!font_bitmap)
             panic(Result{Stage::Engine, Error::FontMemoryAlloc});
 
-        decompress_font_bitmap(font_bitmap);
+        if (!decompress_font_bitmap(font_bitmap))
+            panic(Result{Stage::Engine, Error::FontBitmapDecompress});
     }
 
     inline ~Font() noexcept { hi::free(font_bitmap, font_memory_size); }
