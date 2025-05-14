@@ -251,8 +251,8 @@ void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
     Chunk::extract_frustum_planes(planes, proj_view);
 
     for (const auto &[key, mesh] : mesh_map) {
-        if (!Chunk::is_chunk_visible(mesh, planes))
-            continue;
+        // if (!Chunk::is_chunk_visible(mesh, planes))
+        //    continue;
         glDrawArrays(GL_TRIANGLES, mesh.vertex_offset, mesh.vertex_count);
     }
 }
