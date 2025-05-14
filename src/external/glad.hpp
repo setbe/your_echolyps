@@ -1952,9 +1952,9 @@ GLAPI PFNGLDISABLEPROC glad_glDisable;
 typedef void(APIENTRYP PFNGLENABLEPROC)(GLenum cap);
 GLAPI PFNGLENABLEPROC glad_glEnable;
 #define glEnable glad_glEnable
-// typedef void(APIENTRYP PFNGLFINISHPROC)(void);
-// GLAPI PFNGLFINISHPROC glad_glFinish;
-// #define glFinish glad_glFinish
+typedef void(APIENTRYP PFNGLFINISHPROC)(void);
+GLAPI PFNGLFINISHPROC glad_glFinish;
+#define glFinish glad_glFinish
 // typedef void(APIENTRYP PFNGLFLUSHPROC)(void);
 // GLAPI PFNGLFLUSHPROC glad_glFlush;
 // #define glFlush glad_glFlush

@@ -13,7 +13,7 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 DEBUG_CXXFLAGS = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
   -std=c++20 -O3 -DNDEBUG \
-  -flto -ffreestanding -fomit-frame-pointer \
+  -flto -fomit-frame-pointer \
   -fno-exceptions -fno-use-cxa-atexit \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -march=native \
@@ -28,7 +28,7 @@ PUBLIC_CXXFLAGS = \
 
 MINI_CXXFLAGS = \
   -std=c++20 -Os -DNDEBUG \
-  -flto -ffreestanding -fomit-frame-pointer \
+  -flto -fomit-frame-pointer \
   -fno-exceptions -fno-use-cxa-atexit \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -fno-ident -march=native

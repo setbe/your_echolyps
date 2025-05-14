@@ -452,7 +452,6 @@ void set_fullscreen(const Handler, bool) noexcept {
 void center_cursor(const Handler handler) noexcept {
     XWarpPointer(dsp, None, win, 0, 0, 0, 0, (int)(win_width / 2),
                  (int)(win_height / 2));
-    XFlush(dsp);
 }
 
 void set_cursor_visible(const Handler handler, bool visible) noexcept {

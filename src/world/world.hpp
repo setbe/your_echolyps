@@ -12,7 +12,7 @@
 namespace hi {
 
 struct World {
-    static constexpr int STREAM_RADIUS = 5;
+    static constexpr int STREAM_RADIUS = 2;
 
     math::mat4x4 projection;
     math::mat4x4 view;

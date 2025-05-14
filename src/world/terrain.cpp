@@ -33,17 +33,12 @@ void Terrain::free_chunk_slot(GLuint offset, GLuint count) {
 Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     mesh_buffer =
         static_cast<Vertex *>(hi::alloc(TOTAL_VERT_CAP * sizeof(Vertex)));
-    index_buffer =
-        static_cast<GLuint *>(hi::alloc(TOTAL_IDX_CAP * sizeof(GLuint)));
-    if (!mesh_buffer || !index_buffer)
+    if (!mesh_buffer)
         panic(Result{Stage::Game, Error::ChunkMemoryAlloc});
 
     vbo.bind(GL_ARRAY_BUFFER);
     vbo.buffer_data(GL_ARRAY_BUFFER, TOTAL_VERT_CAP * sizeof(Vertex), nullptr,
                     GL_STATIC_DRAW);
-    ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
-    ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, TOTAL_IDX_CAP * sizeof(GLuint),
-                    nullptr, GL_STATIC_DRAW);
 
     vao.bind();
     vbo.bind(GL_ARRAY_BUFFER);
@@ -108,7 +103,6 @@ Terrain::~Terrain() noexcept {
     if (worker.joinable())
         worker.join();
     hi::free(mesh_buffer, TOTAL_VERT_CAP * sizeof(Vertex));
-    hi::free(index_buffer, TOTAL_IDX_CAP * sizeof(GLuint));
 }
 
 void Terrain::bind_vertex_attributes() const noexcept {
@@ -211,18 +205,10 @@ void Terrain::upload_ready_chunks() {
 
         memcpy(mesh_buffer + offset, verts.data(),
                verts.size() * sizeof(Vertex));
-        for (size_t i = 0; i < verts.size(); ++i)
-            index_buffer[offset + i] = offset + i;
 
         vbo.bind(GL_ARRAY_BUFFER);
         vbo.sub_data(GL_ARRAY_BUFFER, offset * sizeof(Vertex),
                      verts.size() * sizeof(Vertex), verts.data());
-
-        ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
-        ebo.sub_data(GL_ELEMENT_ARRAY_BUFFER, offset * sizeof(GLuint),
-                     verts.size() * sizeof(GLuint), index_buffer + offset);
-
-        hi::sleep(30);
 
         mesh_map[key] = Chunk::Mesh{offset, static_cast<unsigned>(verts.size()),
                                     float(key.x * Chunk::WIDTH),
@@ -264,13 +250,10 @@ void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
     float planes[6][4];
     Chunk::extract_frustum_planes(planes, proj_view);
 
-    ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
     for (const auto &[key, mesh] : mesh_map) {
-        // if (!Chunk::is_chunk_visible(mesh, planes))
-        //     continue;
-        glDrawElementsBaseVertex(
-            GL_TRIANGLES, mesh.vertex_count, GL_UNSIGNED_INT,
-            (void *)(mesh.vertex_offset * sizeof(GLuint)), 0);
+        if (!Chunk::is_chunk_visible(mesh, planes))
+            continue;
+        glDrawArrays(GL_TRIANGLES, mesh.vertex_offset, mesh.vertex_count);
     }
 }
 

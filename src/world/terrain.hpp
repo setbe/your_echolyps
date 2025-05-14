@@ -44,16 +44,13 @@ struct FreeSlot {
 
 struct Terrain {
     static constexpr size_t TOTAL_VERT_CAP = 16 * 1024 * 1024;
-    static constexpr size_t TOTAL_IDX_CAP = TOTAL_VERT_CAP;
 
     siv::PerlinNoise noise;
 
     Vertex *mesh_buffer = nullptr;
-    GLuint *index_buffer = nullptr;
 
     Opengl::VAO vao;
     Opengl::VBO vbo;
-    Opengl::EBO ebo;
     hi::Opengl::Texture atlas;
     Opengl::ShaderProgram shader_program;
     unsigned projection_location = 0;
@@ -67,7 +64,6 @@ struct Terrain {
 
     std::vector<FreeSlot> free_slots;
     GLuint used_vertices = 0;
-    GLuint used_indices = 0;
 
     std::queue<ChunkKey> pending_queue;
     std::unordered_set<ChunkKey, ChunkKey::Hash> pending_set;

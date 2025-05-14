@@ -241,7 +241,7 @@ PFNGLENABLEVERTEXATTRIBARRAYPROC glad_glEnableVertexAttribArray = nullptr;
 // PFNGLEVALPOINT2PROC glad_glEvalPoint2 = nullptr;
 // PFNGLFEEDBACKBUFFERPROC glad_glFeedbackBuffer = nullptr;
 // PFNGLFENCESYNCPROC glad_glFenceSync = nullptr;
-// PFNGLFINISHPROC glad_glFinish = nullptr;
+PFNGLFINISHPROC glad_glFinish = nullptr;
 // PFNGLFLUSHPROC glad_glFlush = nullptr;
 // PFNGLFLUSHMAPPEDBUFFERRANGEPROC glad_glFlushMappedBufferRange = nullptr;
 // PFNGLFOGCOORDPOINTERPROC glad_glFogCoordPointer = nullptr;
@@ -1001,8 +1001,7 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
     // (PFNGLDEPTHMASKPROC)load("glDepthMask");
     glad_glDisable = (PFNGLDISABLEPROC)load("glDisable");
     glad_glEnable = (PFNGLENABLEPROC)load("glEnable");
-    // glad_glFinish =
-    // (PFNGLFINISHPROC)load("glFinish"); glad_glFlush =
+    glad_glFinish = (PFNGLFINISHPROC)load("glFinish"); // glad_glFlush =
     // (PFNGLFLUSHPROC)load("glFlush");
     glad_glBlendFunc = (PFNGLBLENDFUNCPROC)load("glBlendFunc");
     // glad_glLogicOp =
