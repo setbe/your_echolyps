@@ -1,27 +1,49 @@
 #include "terrain.hpp"
-
-#include "../resources/shaders.hpp" // for `terrain_vert`, `terrain_frag`
+#include "../resources/shaders.hpp"
 #include "../resources/texturepack.hpp"
 
 namespace hi {
 
-Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
-    data = static_cast<Block *>(hi::alloc(size()));
-    mesh_buffer = static_cast<Vertex *>(hi::alloc(current_buffer_capacity));
-    index_buffer = static_cast<GLuint *>(
-        hi::alloc(current_index_capacity * sizeof(GLuint)));
+bool Terrain::allocate_chunk_slot(GLuint count, GLuint &out_offset) {
+    for (size_t i = 0; i < free_slots.size(); ++i) {
+        if (free_slots[i].count >= count) {
+            out_offset = free_slots[i].offset;
+            if (free_slots[i].count == count) {
+                free_slots.erase(free_slots.begin() + i);
+            } else {
+                free_slots[i].offset += count;
+                free_slots[i].count -= count;
+            }
+            return true;
+        }
+    }
 
-    if (!data || !mesh_buffer || !index_buffer)
+    if (used_vertices + count > TOTAL_VERT_CAP)
+        return false;
+
+    out_offset = used_vertices;
+    used_vertices += count;
+    return true;
+}
+
+void Terrain::free_chunk_slot(GLuint offset, GLuint count) {
+    free_slots.push_back({offset, count});
+}
+
+Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
+    mesh_buffer =
+        static_cast<Vertex *>(hi::alloc(TOTAL_VERT_CAP * sizeof(Vertex)));
+    index_buffer =
+        static_cast<GLuint *>(hi::alloc(TOTAL_IDX_CAP * sizeof(GLuint)));
+    if (!mesh_buffer || !index_buffer)
         panic(Result{Stage::Game, Error::ChunkMemoryAlloc});
 
     vbo.bind(GL_ARRAY_BUFFER);
-    vbo.buffer_data(GL_ARRAY_BUFFER, current_buffer_capacity, nullptr,
+    vbo.buffer_data(GL_ARRAY_BUFFER, TOTAL_VERT_CAP * sizeof(Vertex), nullptr,
                     GL_STATIC_DRAW);
-
     ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
-    ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER,
-                    current_index_capacity * sizeof(GLuint), nullptr,
-                    GL_STATIC_DRAW);
+    ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, TOTAL_IDX_CAP * sizeof(GLuint),
+                    nullptr, GL_STATIC_DRAW);
 
     vao.bind();
     vbo.bind(GL_ARRAY_BUFFER);
@@ -33,14 +55,12 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     view_location = glGetUniformLocation(shader_program.get(), "view");
     atlas_location = glGetUniformLocation(shader_program.get(), "atlas");
 
-    constexpr unsigned TEXTUREPACK_SIZE =
+    constexpr unsigned TEX_SIZE =
         TEXTUREPACK_ATLAS_WIDTH * TEXTUREPACK_ATLAS_HEIGHT * 4;
-
     unsigned char *atlas_pixels =
-        static_cast<unsigned char *>(hi::alloc(TEXTUREPACK_SIZE));
+        static_cast<unsigned char *>(hi::alloc(TEX_SIZE));
     if (!atlas_pixels)
-        hi::panic(Result{Stage::Game, Error::TexturepackMemoryAlloc});
-
+        panic(Result{Stage::Game, Error::TexturepackMemoryAlloc});
     decompress_atlas(atlas_pixels);
 
     atlas.bind(GL_TEXTURE_2D);
@@ -49,78 +69,46 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, TEXTUREPACK_ATLAS_WIDTH,
                  TEXTUREPACK_ATLAS_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  atlas_pixels);
+    hi::free(atlas_pixels, TEX_SIZE);
 
-    hi::free(atlas_pixels, TEXTUREPACK_SIZE);
+    worker = std::thread([this] {
+        while (running) {
+            ChunkKey key;
+            {
+                std::unique_lock lk(mutex_pending);
+                cv.wait(lk, [&] { return !pending_queue.empty() || !running; });
+                if (!running)
+                    break;
+                key = pending_queue.front();
+                pending_queue.pop();
+                pending_set.erase(key);
+            }
+
+            auto blocks = std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
+            Chunk::generate_chunk(key.x, key.y, key.z, blocks.get(), noise);
+            std::vector<Vertex> mesh;
+            generate_mesh_for(key, blocks.get(), mesh);
+
+            {
+                std::lock_guard lk_ready(mutex_ready);
+                ready.push({key, std::move(mesh)});
+            }
+
+            {
+                std::lock_guard lk_pending(mutex_pending);
+                block_map.emplace(key, std::move(blocks));
+            }
+        }
+    });
 }
 
 Terrain::~Terrain() noexcept {
-    hi::free(data, size());
-    hi::free(mesh_buffer, current_buffer_capacity);
-    hi::free(index_buffer, current_index_capacity * sizeof(GLuint));
-}
-
-Block Terrain::get_block_at(int gx, int gy, int gz) const noexcept {
-    // g - Global
-    // c - Chunk
-    // l - Local
-
-    if (gx < 0 || gy < 0 || gz < 0 || gx >= CHUNKS_X * Chunk::WIDTH ||
-        gy >= CHUNKS_Y * Chunk::HEIGHT || gz >= CHUNKS_Z * Chunk::DEPTH)
-        return {0, 0, 0, 0};
-
-    unsigned cx = gx / Chunk::WIDTH;
-    unsigned cy = gy / Chunk::HEIGHT;
-    unsigned cz = gz / Chunk::DEPTH;
-    unsigned chunk_index = cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
-
-    unsigned lx = gx % Chunk::WIDTH;
-    unsigned ly = gy % Chunk::HEIGHT;
-    unsigned lz = gz % Chunk::DEPTH;
-
-    return data[chunk_index * Chunk::BLOCKS_PER_CHUNK +
-                Chunk::calculate_block_index(lx, ly, lz)];
-}
-
-void Terrain::emit_face(unsigned &idx, float x, float y, float z, int face,
-                        Block block) noexcept {
-    const float *POS = Block::CUBE_POS[face];
-
-    uint32_t mask = block.texture_protocol();
-    uint32_t bid = block.block_id() - 1;
-    uint32_t off = 0;
-    using Texture = BlockList::Texture;
-
-    if (mask == Texture::ONE)
-        off = 0;
-    else if (mask == Texture::TWO)
-        off = (face == 4 || face == 5) ? 0 : 1;
-    else if (mask == Texture::THREE_FRONT)
-        off = (face == 4 || face == 5) ? 0 : face == 0 ? 1 : 2;
-    else if (mask == Texture::THREE_SIDES)
-        off = face == 4 ? 0 : face == 5 ? 2 : 1;
-    else
-        off = face; // SIX
-
-    constexpr int TILES_PER_ROW =
-        TEXTUREPACK_ATLAS_WIDTH / BlockList::Texture::RESOLUTION;
-
-    uint32_t tex = bid + off;
-    uint32_t tx = tex % TILES_PER_ROW, ty = tex / TILES_PER_ROW;
-
-    for (int i = 0; i < 6; ++i) {
-        Vertex &vertex = mesh_buffer[idx];
-        vertex.position_block[0] = x + POS[i * 3 + 0];
-        vertex.position_block[1] = y + POS[i * 3 + 1];
-        vertex.position_block[2] = z + POS[i * 3 + 2];
-        vertex.position_block[3] = block.to_float();
-
-        float u = static_cast<float>(tx) + Block::FACE_UVS[i * 2 + 0];
-        float v = static_cast<float>(ty) + Block::FACE_UVS[i * 2 + 1];
-        vertex.uv[0] = u / static_cast<float>(TILES_PER_ROW);
-        vertex.uv[1] = v / static_cast<float>(TILES_PER_ROW);
-
-        index_buffer[used_indices++] = idx++;
-    }
+    running = false;
+    cv.notify_all();
+    if (worker.joinable())
+        worker.join();
+    hi::free(mesh_buffer, TOTAL_VERT_CAP * sizeof(Vertex));
+    hi::free(index_buffer, TOTAL_IDX_CAP * sizeof(GLuint));
 }
 
 void Terrain::bind_vertex_attributes() const noexcept {
@@ -132,70 +120,131 @@ void Terrain::bind_vertex_attributes() const noexcept {
                           (void *)offsetof(Vertex, uv));
 }
 
-void Terrain::gen_data(unsigned cx, unsigned cy, unsigned cz) noexcept {
-    unsigned chunk_index = cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
-    Block *dst = &data[chunk_index * Chunk::BLOCKS_PER_CHUNK];
-    Chunk::generate_chunk(cx, cy, cz, dst, noise);
-}
-void Terrain::gen_data_all() noexcept {
-    for (unsigned cz = 0; cz < CHUNKS_Z; ++cz)
-        for (unsigned cy = 0; cy < CHUNKS_Y; ++cy)
-            for (unsigned cx = 0; cx < CHUNKS_X; ++cx)
-                gen_data(cx, cy, cz);
-}
-
-void Terrain::gen_mesh(unsigned chunk_index) noexcept {
-    unsigned base_vertex = used_vertices;
-    unsigned count = 0;
-
-    unsigned c_base = chunk_index * Chunk::BLOCKS_PER_CHUNK;
-    unsigned cx = chunk_index % CHUNKS_X;
-    unsigned cy = (chunk_index / CHUNKS_X) % CHUNKS_Y;
-    unsigned cz = chunk_index / (CHUNKS_X * CHUNKS_Y);
-
-    for (unsigned z = 0; z < Chunk::DEPTH; ++z)
-        for (unsigned y = 0; y < Chunk::HEIGHT; ++y)
-            for (unsigned x = 0; x < Chunk::WIDTH; ++x) {
-                unsigned local_index = Chunk::calculate_block_index(x, y, z);
-                Block blk = data[c_base + local_index];
+void Terrain::generate_mesh_for(const ChunkKey &key, const Block *blocks,
+                                std::vector<Vertex> &out) const noexcept {
+    const unsigned W = Chunk::WIDTH, H = Chunk::HEIGHT, D = Chunk::DEPTH;
+    for (unsigned z = 0; z < D; ++z)
+        for (unsigned y = 0; y < H; ++y)
+            for (unsigned x = 0; x < W; ++x) {
+                const Block &blk = blocks[z * W * H + y * W + x];
                 if (blk.block_id() == BlockList::Air.block_id())
                     continue;
 
-                int gx = x + cx * Chunk::WIDTH;
-                int gy = y + cy * Chunk::HEIGHT;
-                int gz = z + cz * Chunk::DEPTH;
+                int gx = x + key.x * W, gy = y + key.y * H, gz = z + key.z * D;
 
                 for (int face = 0; face < 6; ++face) {
                     int dx = (face == 2) ? -1 : (face == 3) ? 1 : 0;
                     int dy = (face == 5) ? -1 : (face == 4) ? 1 : 0;
                     int dz = (face == 1) ? -1 : (face == 0) ? 1 : 0;
-                    Block neighbor = get_block_at(gx + dx, gy + dy, gz + dz);
-                    if (neighbor.block_id() == 0) {
-                        emit_face(used_vertices, gx, gy, gz, face, blk);
-                        count += 6;
+                    int nx = int(x) + dx, ny = int(y) + dy, nz = int(z) + dz;
+
+                    bool isAir = true;
+                    if (nx >= 0 && nx < int(W) && ny >= 0 && ny < int(H) &&
+                        nz >= 0 && nz < int(D)) {
+                        const Block &nbr = blocks[nz * W * H + ny * W + nx];
+                        isAir = (nbr.block_id() == BlockList::Air.block_id());
+                    }
+
+                    if (!isAir)
+                        continue;
+
+                    for (int i = 0; i < 6; ++i) {
+                        Vertex v;
+                        const float *POS = Block::CUBE_POS[face];
+                        v.position_block[0] = gx + POS[i * 3 + 0];
+                        v.position_block[1] = gy + POS[i * 3 + 1];
+                        v.position_block[2] = gz + POS[i * 3 + 2];
+                        v.position_block[3] = blk.to_float();
+
+                        constexpr int TPR = TEXTUREPACK_ATLAS_WIDTH /
+                                            BlockList::Texture::RESOLUTION;
+                        uint32_t mask = blk.texture_protocol();
+                        uint32_t bid = blk.block_id() - 1;
+                        uint32_t off = 0;
+                        using Texture = BlockList::Texture;
+                        if (mask == Texture::ONE)
+                            off = 0;
+                        else if (mask == Texture::TWO)
+                            off = (face == 4 || face == 5) ? 0 : 1;
+                        else if (mask == Texture::THREE_FRONT)
+                            off = (face == 4 || face == 5)
+                                      ? 0
+                                      : (face == 0 ? 1 : 2);
+                        else if (mask == Texture::THREE_SIDES)
+                            off = (face == 4 ? 0 : face == 5 ? 2 : 1);
+                        else
+                            off = face;
+
+                        uint32_t tex = bid + off;
+                        uint32_t tx = tex % TPR, ty = tex / TPR;
+                        v.uv[0] =
+                            (tx + Block::FACE_UVS[i * 2 + 0]) / float(TPR);
+                        v.uv[1] =
+                            (ty + Block::FACE_UVS[i * 2 + 1]) / float(TPR);
+                        out.push_back(v);
                     }
                 }
             }
-
-    chunk_meshes[chunk_index] = {base_vertex, count, float(cx * Chunk::WIDTH),
-                                 float(cy * Chunk::HEIGHT),
-                                 float(cz * Chunk::DEPTH)};
 }
 
-void Terrain::gen_mesh_all() noexcept {
-    used_vertices = 0;
-    used_indices = 0;
-    for (unsigned i = 0; i < CHUNKS_COUNT; ++i)
-        gen_mesh(i);
+void Terrain::request_chunk(const ChunkKey &key) {
+    std::lock_guard lk(mutex_pending);
+    if (!block_map.contains(key) && !pending_set.contains(key)) {
+        pending_queue.push(key);
+        pending_set.insert(key);
+        cv.notify_one();
+    }
 }
 
-void Terrain::upload() noexcept {
-    vbo.bind(GL_ARRAY_BUFFER);
-    vbo.sub_data(GL_ARRAY_BUFFER, 0, used_vertices * sizeof(Vertex),
-                 mesh_buffer);
-    ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
-    ebo.buffer_data(GL_ELEMENT_ARRAY_BUFFER, used_indices * sizeof(GLuint),
-                    index_buffer, GL_STATIC_DRAW);
+void Terrain::upload_ready_chunks() {
+    std::lock_guard lk(mutex_ready);
+    while (!ready.empty()) {
+        auto [key, verts] = std::move(ready.front());
+        ready.pop();
+
+        GLuint offset = 0;
+        if (!allocate_chunk_slot(verts.size(), offset)) {
+            fprintf(stderr, "[ERROR] No space for chunk at (%d,%d,%d)\n", key.x,
+                    key.y, key.z);
+            continue;
+        }
+
+        memcpy(mesh_buffer + offset, verts.data(),
+               verts.size() * sizeof(Vertex));
+        for (size_t i = 0; i < verts.size(); ++i)
+            index_buffer[offset + i] = offset + i;
+
+        vbo.bind(GL_ARRAY_BUFFER);
+        vbo.sub_data(GL_ARRAY_BUFFER, offset * sizeof(Vertex),
+                     verts.size() * sizeof(Vertex), verts.data());
+
+        ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
+        ebo.sub_data(GL_ELEMENT_ARRAY_BUFFER, offset * sizeof(GLuint),
+                     verts.size() * sizeof(GLuint), index_buffer + offset);
+
+        hi::sleep(30);
+
+        mesh_map[key] = Chunk::Mesh{offset, static_cast<unsigned>(verts.size()),
+                                    float(key.x * Chunk::WIDTH),
+                                    float(key.y * Chunk::HEIGHT),
+                                    float(key.z * Chunk::DEPTH)};
+        loaded_chunks.insert(key);
+    }
+}
+
+void Terrain::unload_chunks_not_in(
+    const std::unordered_set<ChunkKey, ChunkKey::Hash> &active) {
+    for (auto it = loaded_chunks.begin(); it != loaded_chunks.end();) {
+        if (!active.contains(*it)) {
+            const auto &mesh = mesh_map[*it];
+            free_chunk_slot(mesh.vertex_offset, mesh.vertex_count);
+            mesh_map.erase(*it);
+            block_map.erase(*it);
+            it = loaded_chunks.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
@@ -216,11 +265,9 @@ void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
     Chunk::extract_frustum_planes(planes, proj_view);
 
     ebo.bind(GL_ELEMENT_ARRAY_BUFFER);
-
-    for (unsigned i = 0; i < CHUNKS_COUNT; ++i) {
-        const auto &mesh = chunk_meshes[i];
-        if (!Chunk::is_chunk_visible(mesh, planes))
-            continue;
+    for (const auto &[key, mesh] : mesh_map) {
+        // if (!Chunk::is_chunk_visible(mesh, planes))
+        //     continue;
         glDrawElementsBaseVertex(
             GL_TRIANGLES, mesh.vertex_count, GL_UNSIGNED_INT,
             (void *)(mesh.vertex_offset * sizeof(GLuint)), 0);

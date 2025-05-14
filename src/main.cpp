@@ -15,7 +15,7 @@ void hi::Engine::update() noexcept {
     // Render debug menu in the game
     if (show_debug_menu) {
         simple_timer += dt;
-        if (simple_timer > 0.1f) {
+        if (simple_timer > 0.5f) {
             unsigned fps = dt > 0.0 ? static_cast<unsigned>(1.0 / dt) : 0;
             text.add_text(-0.93f, 0.9f, 0.003f,
                           "x %f y %f z %f\n"
@@ -63,8 +63,10 @@ void hi::Engine::update() noexcept {
         should_update_view = true;
     }
 
-    if (should_update_view)
+    if (should_update_view) {
         world.camera.look_at(world.view);
+        world.update_pos();
+    }
 }
 
 void hi::Engine::draw() const noexcept {
@@ -112,6 +114,7 @@ int main() {
     // `false` means user closed the window
     while (e.surface.poll_events()) {
         e.update();
+        e.world.update();
         e.draw();
     }
     return 0;

@@ -24,7 +24,7 @@ struct Block {
                            bool transparent = false) noexcept
         : id{id}, flags{make_flags(light, faces, transparent)} {}
 
-    inline constexpr Block(uint16_t id, uint16_t flags) noexcept
+    inline constexpr Block(uint16_t id = 0, uint16_t flags = 0) noexcept
         : id{id}, flags{flags} {}
 
     template <uint16_t T_BlockID, uint16_t T_TextureMask>
