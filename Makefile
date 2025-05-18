@@ -12,26 +12,25 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 # Compilation flags
 DEBUG_CXXFLAGS = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
-  -std=c++20 -O3 -DNDEBUG \
-  -flto -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
+  -std=c++20 -O3 -march=native -DNDEBUG \
+  -flto \
+  -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
-  -march=native \
   -fno-ident
 
 PUBLIC_CXXFLAGS = \
   -std=c++20 -O2 -DNDEBUG -DHI_PUBLIC \
-  -flto -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
+  -flto \
+  -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -fno-ident
 
 MINI_CXXFLAGS = \
   -std=c++20 -Os -DNDEBUG \
-  -flto -fomit-frame-pointer \
-  -fno-exceptions -fno-use-cxa-atexit \
+  -flto \
+  -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
-  -fno-ident -march=native
+  -fno-ident
 
 # Linker flags
 DEBUG_LDFLAGS = -lX11 -lGL -ldl

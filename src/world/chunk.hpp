@@ -6,7 +6,9 @@
 #include "../resources/texturepack.hpp"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
+#include <vector> // for std::hash
 
 namespace hi {
 struct Block {
@@ -143,13 +145,27 @@ struct Chunk {
         unsigned vertex_offset;
         unsigned vertex_count;
         float world_x, world_y, world_z;
-    };
+    }; // struct Mesh
+    struct Key {
+        int x, y, z;
+        bool operator==(const Key &o) const noexcept {
+            return x == o.x && y == o.y && z == o.z;
+        }
+        struct Hash {
+            size_t operator()(const Key &k) const noexcept {
+                size_t h1 = std::hash<int>{}(k.x);
+                size_t h2 = std::hash<int>{}(k.y);
+                size_t h3 = std::hash<int>{}(k.z);
+                return h1 ^ (h2 << 1) ^ (h3 << 2);
+            }
+        }; // struct Key::Hash
+    }; // struct Key
     Chunk() = delete; // delete constructor
     Chunk(const Chunk &) = delete;
     Chunk(Chunk &&) = delete;
 
     constexpr static unsigned WIDTH = 32;
-    constexpr static unsigned HEIGHT = 32;
+    constexpr static unsigned HEIGHT = 64;
     constexpr static unsigned DEPTH = 32;
 
     constexpr static unsigned BLOCKS_PER_CHUNK = WIDTH * HEIGHT * DEPTH;
@@ -158,12 +174,13 @@ struct Chunk {
                                                  unsigned z) noexcept {
         assert(x < WIDTH && y < HEIGHT && z < DEPTH);
         return x + y * WIDTH + z * WIDTH * HEIGHT;
-    }
+    } // calculate_block_index
 
     inline static void generate_chunk(unsigned cx, unsigned cy, unsigned cz,
                                       Block *out, const siv::PerlinNoise &noise,
                                       unsigned lod_size = 1) noexcept {
         constexpr int DIRT_DEPTH = 4;
+
         for (unsigned z = 0; z < DEPTH; z += lod_size)
             for (unsigned y = 0; y < HEIGHT; y += lod_size)
                 for (unsigned x = 0; x < WIDTH; x += lod_size) {
@@ -173,7 +190,7 @@ struct Chunk {
                     int gz = int(cz * DEPTH + z);
 
                     double h =
-                        noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 32.0;
+                        noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 522.0;
                     int H = int(math::floorf(static_cast<float>(h)));
 
                     if (gy > H) {
@@ -186,12 +203,12 @@ struct Chunk {
                         out[idx] = BlockList::Cobblestone;
                     }
                 }
-    }
+    } // generate_chunk
 
     inline static bool is_block_on_chunk_edge(int x, int y, int z) noexcept {
         return x == 0 || x == Chunk::WIDTH - 1 || y == 0 ||
                y == Chunk::HEIGHT - 1 || z == 0 || z == Chunk::DEPTH - 1;
-    }
+    } // is_block_on_chunk_edge
 
     inline static bool
     is_chunk_visible(const Mesh &mesh,
@@ -205,15 +222,14 @@ struct Chunk {
 
         for (int i = 0; i < 6; ++i) {
             const float *p = frustum_planes[i];
-            // closest to outside
-            float vx = (p[0] < 0) ? x0 : x1;
-            float vy = (p[1] < 0) ? y0 : y1;
-            float vz = (p[2] < 0) ? z0 : z1;
-            if (p[0] * vx + p[1] * vy + p[2] * vz + p[3] < 0)
+            const float vx = (p[0] > 0.0f) ? x1 : x0;
+            const float vy = (p[1] > 0.0f) ? y1 : y0;
+            const float vz = (p[2] > 0.0f) ? z1 : z0;
+            if (p[0] * vx + p[1] * vy + p[2] * vz + p[3] < 0.0f)
                 return false;
         }
         return true;
-    }
+    } // is_chunk_visible
 
     inline static void
     extract_frustum_planes(float planes[6][4],
@@ -249,7 +265,7 @@ struct Chunk {
         planes[5][1] = m[7] - m[6];
         planes[5][2] = m[11] - m[10];
         planes[5][3] = m[15] - m[14];
-    }
+    } // extract_frustum_planes
 
 }; // struct Chunk
 } // namespace hi

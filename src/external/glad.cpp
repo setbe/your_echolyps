@@ -189,13 +189,13 @@ PFNGLDISABLEPROC glad_glDisable = nullptr;
 // PFNGLDISPATCHCOMPUTEINDIRECTPROC glad_glDispatchComputeIndirect = nullptr;
 PFNGLDRAWARRAYSPROC glad_glDrawArrays = nullptr;
 // PFNGLDRAWARRAYSINDIRECTPROC glad_glDrawArraysIndirect = nullptr;
-PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced = nullptr;
+// PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced = nullptr;
 // PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC
 // glad_glDrawArraysInstancedBaseInstance = nullptr;
 // PFNGLDRAWBUFFERPROC glad_glDrawBuffer = nullptr;
 // PFNGLDRAWBUFFERSPROC glad_glDrawBuffers = nullptr;
 PFNGLDRAWELEMENTSPROC glad_glDrawElements = nullptr;
-PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex = nullptr;
+// PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex = nullptr;
 // PFNGLDRAWELEMENTSINDIRECTPROC glad_glDrawElementsIndirect = nullptr;
 // PFNGLDRAWELEMENTSINSTANCEDPROC glad_glDrawElementsInstanced = nullptr;
 // PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC
@@ -241,7 +241,7 @@ PFNGLENABLEVERTEXATTRIBARRAYPROC glad_glEnableVertexAttribArray = nullptr;
 // PFNGLEVALPOINT2PROC glad_glEvalPoint2 = nullptr;
 // PFNGLFEEDBACKBUFFERPROC glad_glFeedbackBuffer = nullptr;
 // PFNGLFENCESYNCPROC glad_glFenceSync = nullptr;
-PFNGLFINISHPROC glad_glFinish = nullptr;
+// PFNGLFINISHPROC glad_glFinish = nullptr;
 // PFNGLFLUSHPROC glad_glFlush = nullptr;
 // PFNGLFLUSHMAPPEDBUFFERRANGEPROC glad_glFlushMappedBufferRange = nullptr;
 // PFNGLFOGCOORDPOINTERPROC glad_glFogCoordPointer = nullptr;
@@ -1001,7 +1001,7 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
     // (PFNGLDEPTHMASKPROC)load("glDepthMask");
     glad_glDisable = (PFNGLDISABLEPROC)load("glDisable");
     glad_glEnable = (PFNGLENABLEPROC)load("glEnable");
-    glad_glFinish = (PFNGLFINISHPROC)load("glFinish"); // glad_glFlush =
+    // glad_glFinish = (PFNGLFINISHPROC)load("glFinish"); // glad_glFlush =
     // (PFNGLFLUSHPROC)load("glFlush");
     glad_glBlendFunc = (PFNGLBLENDFUNCPROC)load("glBlendFunc");
     // glad_glLogicOp =
@@ -1868,8 +1868,8 @@ static void load_GL_VERSION_3_0(GLADloadproc load) {
 }
 
 static void load_GL_VERSION_3_1(GLADloadproc load) {
-    glad_glDrawArraysInstanced =
-        (PFNGLDRAWARRAYSINSTANCEDPROC)load("glDrawArraysInstanced");
+    // glad_glDrawArraysInstanced =
+    //     (PFNGLDRAWARRAYSINSTANCEDPROC)load("glDrawArraysInstanced");
     // glad_glDrawElementsInstanced =
     //     (PFNGLDRAWELEMENTSINSTANCEDPROC)load("glDrawElementsInstanced");
     // glad_glTexBuffer = (PFNGLTEXBUFFERPROC)load("glTexBuffer");
@@ -1899,8 +1899,8 @@ static void load_GL_VERSION_3_1(GLADloadproc load) {
 }
 
 static void load_GL_VERSION_3_2(GLADloadproc load) {
-    glad_glDrawElementsBaseVertex =
-        (PFNGLDRAWELEMENTSBASEVERTEXPROC)load("glDrawElementsBaseVertex");
+    // glad_glDrawElementsBaseVertex =
+    //    (PFNGLDRAWELEMENTSBASEVERTEXPROC)load("glDrawElementsBaseVertex");
     // glad_glDrawRangeElementsBaseVertex =
     //     (PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)load(
     //         "glDrawRangeElementsBaseVertex");

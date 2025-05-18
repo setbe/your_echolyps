@@ -65,26 +65,8 @@ sudo apk add libx11-dev mesa-dev
 ```
 
 ### Resources
-**Shaders**
 ```sh
-make shaders
-```
-Search for expected output:
-```
-...
-Generated "/home/.../your_echolyps/src/shaders.hpp"
-...
-```
-
-**Font**
-```sh
-make font
-```
-Search for expected output:
-```
-...
-[info] Generated ../../src/fonts.hpp with XXX glyphs in WWWxHHH atlas.
-...
+make shaders && make font && make textures
 ```
 
 ### Compile

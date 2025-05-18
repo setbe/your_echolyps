@@ -1,4 +1,5 @@
 #include "terrain.hpp"
+#include "../higui/debug.hpp"
 #include "../resources/shaders.hpp"
 #include "../resources/texturepack.hpp"
 
@@ -68,7 +69,7 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
 
     worker = std::thread([this] {
         while (running) {
-            ChunkKey key;
+            Chunk::Key key;
             {
                 std::unique_lock lk(mutex_pending);
                 cv.wait(lk, [&] { return !pending_queue.empty() || !running; });
@@ -114,7 +115,7 @@ void Terrain::bind_vertex_attributes() const noexcept {
                           (void *)offsetof(Vertex, uv));
 }
 
-void Terrain::generate_mesh_for(const ChunkKey &key, const Block *blocks,
+void Terrain::generate_mesh_for(const Chunk::Key &key, const Block *blocks,
                                 std::vector<Vertex> &out) const noexcept {
     const unsigned W = Chunk::WIDTH, H = Chunk::HEIGHT, D = Chunk::DEPTH;
     for (unsigned z = 0; z < D; ++z)
@@ -154,6 +155,8 @@ void Terrain::generate_mesh_for(const ChunkKey &key, const Block *blocks,
                                             BlockList::Texture::RESOLUTION;
                         uint32_t mask = blk.texture_protocol();
                         uint32_t bid = blk.block_id() - 1;
+
+                        // Echolyps's texture protocol
                         uint32_t off = 0;
                         using Texture = BlockList::Texture;
                         if (mask == Texture::ONE)
@@ -179,9 +182,13 @@ void Terrain::generate_mesh_for(const ChunkKey &key, const Block *blocks,
                     }
                 }
             }
+
+    // if (key.x < 0 || key.y < 0 || key.z < 0)
+    //    printf("[generate_mesh] key = (%d %d %d), vertices = %zu\n", key.x,
+    //           key.y, key.z, out.size());
 }
 
-void Terrain::request_chunk(const ChunkKey &key) {
+void Terrain::request_chunk(const Chunk::Key &key) {
     std::lock_guard lk(mutex_pending);
     if (!block_map.contains(key) && !pending_set.contains(key)) {
         pending_queue.push(key);
@@ -207,19 +214,27 @@ void Terrain::upload_ready_chunks() {
                verts.size() * sizeof(Vertex));
 
         vbo.bind(GL_ARRAY_BUFFER);
-        vbo.sub_data(GL_ARRAY_BUFFER, offset * sizeof(Vertex),
-                     verts.size() * sizeof(Vertex), verts.data());
+        vbo.sub_data(/* target */ GL_ARRAY_BUFFER,
+                     /* offset */ offset * sizeof(Vertex),
+                     /* size   */ verts.size() * sizeof(Vertex),
+                     /* data   */ verts.data());
 
-        mesh_map[key] = Chunk::Mesh{offset, static_cast<unsigned>(verts.size()),
-                                    float(key.x * Chunk::WIDTH),
-                                    float(key.y * Chunk::HEIGHT),
-                                    float(key.z * Chunk::DEPTH)};
+        mesh_map[key] =
+            Chunk::Mesh{/* vertex_offset */ offset,
+                        /* vertex_count  */ static_cast<unsigned>(verts.size()),
+                        /* world_x       */ float(int(key.x * Chunk::WIDTH)),
+                        /* world_y       */ float(int(key.y * Chunk::HEIGHT)),
+                        /* world_z       */ float(int(key.z * Chunk::DEPTH))};
+        debug_print("[upload_ready_chunks] added mesh for chunk (%d %d %d), "
+                    "vertex_count = %zu\n",
+                    key.x, key.y, key.z, verts.size());
+
         loaded_chunks.insert(key);
     }
 }
 
 void Terrain::unload_chunks_not_in(
-    const std::unordered_set<ChunkKey, ChunkKey::Hash> &active) {
+    const std::unordered_set<Chunk::Key, Chunk::Key::Hash> &active) {
     for (auto it = loaded_chunks.begin(); it != loaded_chunks.end();) {
         if (!active.contains(*it)) {
             const auto &mesh = mesh_map[*it];
@@ -233,26 +248,41 @@ void Terrain::unload_chunks_not_in(
     }
 }
 
-void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
-                   const math::vec3 camera_pos) const noexcept {
+void Terrain::draw(const math::mat4x4 projection,
+                   const math::mat4x4 view) const noexcept {
     shader_program.use();
-    glUniform1i(atlas_location, 1);
+    vao.bind();
+
+    // texture atlas
     glActiveTexture(GL_TEXTURE1);
     atlas.bind(GL_TEXTURE_2D);
+    /* atlas */ glUniform1i(atlas_location, 1);
 
-    vao.bind();
-    glUniformMatrix4fv(projection_location, 1, GL_FALSE,
-                       (const GLfloat *)projection);
-    glUniformMatrix4fv(view_location, 1, GL_FALSE, (const GLfloat *)view);
+    /* projection */ glUniformMatrix4fv(
+        /* location  */ projection_location,
+        /* count     */ 1,
+        /* transpose */ GL_FALSE,
+        /* value     */ (const GLfloat *)projection);
 
-    math::mat4x4 proj_view;
-    math::mat4x4_mul(proj_view, projection, view);
-    float planes[6][4];
-    Chunk::extract_frustum_planes(planes, proj_view);
+    /* view */ glUniformMatrix4fv(/* location  */ view_location,
+                                  /* count     */ 1,
+                                  /* transpose */ GL_FALSE,
+                                  /* value     */ (const GLfloat *)view);
 
+    // frustum culling
+    float frustum_planes[6][4];
+    {
+        math::mat4x4 frustum_view;
+        math::mat4x4_identity(frustum_view);
+        math::mat4x4_mul(frustum_view, projection, view);
+        Chunk::extract_frustum_planes(frustum_planes, frustum_view);
+    }
+
+    // render chunks
     for (const auto &[key, mesh] : mesh_map) {
-        // if (!Chunk::is_chunk_visible(mesh, planes))
-        //    continue;
+        if (!Chunk::is_chunk_visible(mesh, frustum_planes) ||
+            mesh.vertex_count == 0)
+            continue;
         glDrawArrays(GL_TRIANGLES, mesh.vertex_offset, mesh.vertex_count);
     }
 }

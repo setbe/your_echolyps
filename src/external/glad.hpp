@@ -1952,9 +1952,9 @@ GLAPI PFNGLDISABLEPROC glad_glDisable;
 typedef void(APIENTRYP PFNGLENABLEPROC)(GLenum cap);
 GLAPI PFNGLENABLEPROC glad_glEnable;
 #define glEnable glad_glEnable
-typedef void(APIENTRYP PFNGLFINISHPROC)(void);
-GLAPI PFNGLFINISHPROC glad_glFinish;
-#define glFinish glad_glFinish
+// typedef void(APIENTRYP PFNGLFINISHPROC)(void);
+// GLAPI PFNGLFINISHPROC glad_glFinish;
+// #define glFinish glad_glFinish
 // typedef void(APIENTRYP PFNGLFLUSHPROC)(void);
 // GLAPI PFNGLFLUSHPROC glad_glFlush;
 // #define glFlush glad_glFlush
@@ -4324,11 +4324,12 @@ GLAPI PFNGLGENVERTEXARRAYSPROC glad_glGenVertexArrays;
 #ifndef GL_VERSION_3_1
 #define GL_VERSION_3_1 1
 
-typedef void(APIENTRYP PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint first,
-                                                     GLsizei count,
-                                                     GLsizei instancecount);
-GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
-#define glDrawArraysInstanced glad_glDrawArraysInstanced
+// typedef void(APIENTRYP PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint
+// first,
+//                                                      GLsizei count,
+//                                                      GLsizei instancecount);
+// GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
+// #define glDrawArraysInstanced glad_glDrawArraysInstanced
 // typedef void(APIENTRYP PFNGLDRAWELEMENTSINSTANCEDPROC)(GLenum mode,
 //                                                        GLsizei count,
 //                                                        GLenum type,
@@ -4392,13 +4393,13 @@ GLAPI PFNGLDRAWARRAYSINSTANCEDPROC glad_glDrawArraysInstanced;
 #ifndef GL_VERSION_3_2
 #define GL_VERSION_3_2 1
 
-typedef void(APIENTRYP PFNGLDRAWELEMENTSBASEVERTEXPROC)(GLenum mode,
-                                                        GLsizei count,
-                                                        GLenum type,
-                                                        const void *indices,
-                                                        GLint basevertex);
-GLAPI PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex;
-#define glDrawElementsBaseVertex glad_glDrawElementsBaseVertex
+// typedef void(APIENTRYP PFNGLDRAWELEMENTSBASEVERTEXPROC)(GLenum mode,
+//                                                         GLsizei count,
+//                                                         GLenum type,
+//                                                         const void *indices,
+//                                                         GLint basevertex);
+// GLAPI PFNGLDRAWELEMENTSBASEVERTEXPROC glad_glDrawElementsBaseVertex;
+// #define glDrawElementsBaseVertex glad_glDrawElementsBaseVertex
 // typedef void(APIENTRYP PFNGLDRAWRANGEELEMENTSBASEVERTEXPROC)(
 //     GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type,
 //     const void *indices, GLint basevertex);

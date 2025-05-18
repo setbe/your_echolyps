@@ -12,8 +12,6 @@
 namespace hi {
 
 struct World {
-    static constexpr int STREAM_RADIUS = 2;
-
     math::mat4x4 projection;
     math::mat4x4 view;
 
@@ -24,13 +22,8 @@ struct World {
 
     World() noexcept : camera{}, terrain{} {
         camera.position[0] = 0.f;
-        camera.position[1] = 60.f;
+        camera.position[1] = 300.f;
         camera.position[2] = 0.f;
-
-        camera.look_at(view);
-        math::mat4x4_perspective(projection, math::radians(camera.fov),
-                                 1920.f / 1080.f, 0.1f, 512.f);
-
         update_pos();
     }
 
@@ -47,9 +40,7 @@ struct World {
 
     void update() noexcept { terrain.upload_ready_chunks(); }
 
-    void draw() const noexcept {
-        terrain.draw(projection, view, camera.position);
-    }
+    void draw() const noexcept { terrain.draw(projection, view); }
 
     inline int chunk_coord(float pos, int size) const {
         return static_cast<int>(std::floor(pos / float(size)));
@@ -67,12 +58,15 @@ struct World {
         center_cy = cy;
         center_cz = cz;
 
-        std::unordered_set<ChunkKey, ChunkKey::Hash> needed;
+        std::unordered_set<Chunk::Key, Chunk::Key::Hash> needed;
 
-        for (int dz = -STREAM_RADIUS; dz <= STREAM_RADIUS; ++dz)
-            for (int dy = -STREAM_RADIUS; dy <= STREAM_RADIUS; ++dy)
-                for (int dx = -STREAM_RADIUS; dx <= STREAM_RADIUS; ++dx) {
-                    ChunkKey key{cx + dx, cy + dy, cz + dz};
+        for (int dz = -Terrain::STREAM_RADIUS; dz <= Terrain::STREAM_RADIUS;
+             ++dz)
+            for (int dy = -Terrain::STREAM_RADIUS; dy <= Terrain::STREAM_RADIUS;
+                 ++dy)
+                for (int dx = -Terrain::STREAM_RADIUS;
+                     dx <= Terrain::STREAM_RADIUS; ++dx) {
+                    Chunk::Key key{cx + dx, cy + dy, cz + dz};
                     needed.insert(key);
                     terrain.request_chunk(key);
                 }
