@@ -236,115 +236,73 @@ void destroy(Handler) noexcept {
 }
 
 static inline unsigned char get_keycode(KeySym ks) {
-    using c = unsigned char;
-    using s = unsigned short;
+    // See hi::KeyCode
 
-    /* START
+    /* ASCII
+        XK_space      0x0020
+        ...
         XK_asciitilde 0x007e (U+007E TILDE)
     */
 
-    constexpr c start = XK_asciitilde + 1;
-
     /* MODIFIERS
-        XK_Shift_L    0xffe1 // 65505
-        XK_Shift_R    0xffe2
-        XK_Control_L  0xffe3
-        XK_Control_R  0xffe4
-        XK_Caps_Lock  0xffe5
-        XK_Shift_Lock 0xffe6
-        XK_Meta_L     0xffe7
-        XK_Meta_R     0xffe8
-        XK_Alt_L      0xffe9
-        XK_Alt_R      0xffea
-        XK_Super_L    0xffeb
-        XK_Super_R    0xffec
-        XK_Hyper_L    0xffed
-        XK_Hyper_R    0xffee // 65518
-    */
-    constexpr s modifiers_begin = XK_Shift_L; // 65505
-    constexpr s modifiers_end = XK_Hyper_R;   // 65518
+         XK_Shift_L    0xffe1 // 65505
+         ...
+         XK_Hyper_R    0xffee // 65518
+     */
 
     /* FUNCTIONAL
-        XK_F1  0xffbe // 65470
-        XK_F2  0xffbf
-        XK_F3  0xffc0
-        XK_F4  0xffc1
-        XK_F5  0xffc2
-        XK_F6  0xffc3
-        XK_F7  0xffc4
-        XK_F8  0xffc5
-        XK_F9  0xffc6
-        XK_F10 0xffc7
-        XK_F11 0xffc8 // 65480
-    */
-
-    constexpr s functional_begin = XK_F1; // 65470
-    constexpr s functional_end = XK_F11;  // 65480
+       XK_F1  0xffbe // 65470
+       ...
+       XK_F11 0xffc8 // 65480
+   */
 
     /* TTY
-        XK_BackSpace 0xff08   // 652,88
-        XK_Tab 0xff09         // 652,89
-        XK_Linefeed 0xff0a    // 652,90
-        XK_Clear 0xff0b       // 652,91
-                              // empty 652,92 (1 char)
-        XK_Return 0xff0d      // 652,93
-                              // empty 652,94-652,98 (5 chars)
-        XK_Pause 0xff13       // 652,99
-        XK_Scroll_Lock 0xff14 // 653,00
-        XK_Sys_Req 0xff15     // 653,01
-                              // empty 653,02 - 653,06 (5 chars)
-        XK_Escape 0xff1b      // 653,07
-    */
-
-    constexpr s tty_begin = XK_BackSpace; // 65288
-    constexpr s tty_end = XK_Escape;      // 65307
+         XK_BackSpace 0xff08   // 652,88
+                               // empty 652,92 (1 char)
+                               // empty 652,94-652,98 (5 chars)
+                               // empty 653,02 - 653,06 (5 chars)
+         XK_Escape 0xff1b      // 653,07
+     */
 
     /* MOTION
-        XK_Home  0xff50 // 65360
-        XK_Left  0xff51
-        XK_Up    0xff52
-        XK_Right 0xff53
-        XK_Down  0xff54 // 65364
-    */
+       XK_Home  0xff50 // 65360
+       ...
+       XK_Down  0xff54 // 65364
+   */
+    struct RangeShort {
+        unsigned short begin;
+        unsigned short end;
 
-    constexpr s motion_begin = XK_Home; // 65360
-    constexpr s motion_end = XK_Down;   // 65364
+        consteval RangeShort(unsigned short begin, unsigned short end) noexcept
+            : begin{begin}, end{end} {}
 
-    constexpr s modifiers_offset = static_cast<c>(key::KeyCode::Hyper_R) -
-                                   static_cast<c>(key::KeyCode::Shift_L) + 1;
-    constexpr s functional_offset = static_cast<c>(key::KeyCode::F11) -
-                                    static_cast<c>(key::KeyCode::F1) + 1;
-    constexpr s tty_offset = static_cast<c>(key::KeyCode::Escape) -
-                             static_cast<c>(key::KeyCode::BackSpace) + 1;
+        unsigned short offset() const noexcept { return end - begin; }
 
-    // ASCII keyS
-    if (ks < start)
-        return static_cast<c>(ks); // return ASCII keycode
+        bool in_range(KeySym key_sym) const noexcept {
+            return key_sym >= begin && key_sym <= end;
+        }
 
-    unsigned char result = start;
+        unsigned char calculate_key(unsigned char global_offset,
+                                    KeySym key_sym) const noexcept {
+            return global_offset + (key_sym - begin);
+        }
+    }; // struct RangeShort
 
-    // Modifier key range
-    if (ks >= modifiers_begin && ks <= modifiers_end)
-        return result + (ks - modifiers_begin);
+    // clang-format off
+    constexpr RangeShort ranges[]{
+        /* ascii  */ { /* begin */ XK_space,     /* end */ XK_asciitilde + 1},
+        /* mods   */ { /* begin */ XK_Shift_L,   /* end */ XK_Hyper_R + 1},
+        /* func   */ { /* begin */ XK_F1,        /* end */ XK_F11 + 1},
+        /* tty    */ { /* begin */ XK_BackSpace, /* end */ XK_Escape + 1},
+        /* motion */ { /* begin */ XK_Home,      /* end */ XK_Down + 1}};
+    // clang-format on
 
-    result += modifiers_offset; // add mod offset
-
-    // Function key range
-    if (ks >= functional_begin && ks <= functional_end)
-        return result + (ks - functional_begin);
-
-    result += functional_offset; // add function keys offset
-
-    // TTY key range
-    if (ks >= tty_begin && ks <= tty_end)
-        return result + (ks - tty_begin);
-
-    result += tty_offset; // add tty offset
-
-    // Motion key range
-    if (ks >= motion_begin && ks <= motion_end)
-        return result + (ks - motion_begin);
-
+    unsigned char global_offset = XK_space;
+    for (auto &r : ranges) {
+        if (r.in_range(ks))
+            return r.calculate_key(global_offset, ks);
+        global_offset += r.offset();
+    }
     return 0; // not found
 }
 
@@ -358,9 +316,8 @@ static inline bool handle_event(XEvent &e) noexcept {
         cb->mouse_move(*cb, e.xmotion.x, e.xmotion.y);
         break;
     case KeyPress: {
-        if (e.xkey.time == last_key_time && e.xkey.keycode == last_keycode) {
+        if (e.xkey.time == last_key_time && e.xkey.keycode == last_keycode)
             break;
-        }
         last_key_time = e.xkey.time;
         last_keycode = e.xkey.keycode;
 
