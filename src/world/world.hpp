@@ -68,7 +68,7 @@ struct World {
                      dx <= Terrain::STREAM_RADIUS; ++dx) {
                     Chunk::Key key{cx + dx, cy + dy, cz + dz};
                     needed.insert(key);
-                    terrain.request_chunk(key);
+                    terrain.request_chunk(key, cx, cy, cz);
                 }
 
         terrain.unload_chunks_not_in(needed);

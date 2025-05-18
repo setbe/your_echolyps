@@ -28,12 +28,24 @@ struct FreeSlot {
     GLuint count;
 };
 
+struct PrioritizedKey {
+    int priority; // less is better
+    Chunk::Key key;
+
+    bool operator<(const PrioritizedKey &rhs) const noexcept {
+        // less priority handles earlier
+        return priority > rhs.priority; // std::priority_queue — max heap
+    }
+};
+
 struct Terrain {
-    constexpr static unsigned char THREADS_NUM = 2;
+    constexpr static unsigned char THREADS_NUM = 5;
     static constexpr int STREAM_RADIUS = 6;
     static constexpr size_t TOTAL_VERT_CAP =
         Chunk::BLOCKS_PER_CHUNK * (STREAM_RADIUS * 2) * (STREAM_RADIUS * 2) *
         (STREAM_RADIUS * 2) * 6 /* Faces per cube */ / 4 /* Coefficient */;
+
+    using Key = Chunk::Key;
 
     siv::PerlinNoise noise;
 
@@ -47,19 +59,19 @@ struct Terrain {
     unsigned view_location = 0;
     unsigned atlas_location = 0;
 
-    std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>, Chunk::Key::Hash>
-        block_map;
-    std::unordered_map<Chunk::Key, Chunk::Mesh, Chunk::Key::Hash> mesh_map;
-    std::unordered_set<Chunk::Key, Chunk::Key::Hash> loaded_chunks;
+    std::unordered_map<Key, std::unique_ptr<Block[]>, Key::Hash> block_map;
+    std::unordered_map<Key, Chunk::Mesh, Key::Hash> mesh_map;
+    std::unordered_set<Key, Key::Hash> loaded_chunks;
 
     std::vector<FreeSlot> free_slots;
     GLuint used_vertices = 0;
 
-    std::queue<Chunk::Key> pending_queue;
-    std::unordered_set<Chunk::Key, Chunk::Key::Hash> pending_set;
-    std::queue<std::pair<Chunk::Key, std::vector<Vertex>>> ready;
+    std::priority_queue<PrioritizedKey> pending_queue;
+    std::unordered_set<Key, Key::Hash> pending_set;
+    std::queue<std::pair<Key, std::vector<Vertex>>> ready;
     std::mutex mutex_pending;
     std::mutex mutex_ready;
+
     std::condition_variable cv;
     std::atomic<bool> running = true;
     std::array<std::thread, THREADS_NUM> workers;
@@ -70,24 +82,24 @@ struct Terrain {
     Terrain(const Terrain &) = delete;
     Terrain &operator=(const Terrain &) = delete;
 
-    void request_chunk(const Chunk::Key &key);
+    void request_chunk(const Key &key, int center_x, int center_y,
+                       int center_z);
     void upload_ready_chunks();
-    void unload_chunks_not_in(
-        const std::unordered_set<Chunk::Key, Chunk::Key::Hash> &active);
+    void unload_chunks_not_in(const std::unordered_set<Key, Key::Hash> &active);
     void draw(const math::mat4x4 projection,
               const math::mat4x4 view) const noexcept;
 
   private:
     void bind_vertex_attributes() const noexcept;
-    void generate_mesh_for(const Chunk::Key &key, const Block *blocks,
+    void generate_mesh_for(const Key &key, const Block *blocks,
                            std::vector<Vertex> &out) const noexcept;
     bool allocate_chunk_slot(GLuint count, GLuint &out_offset);
     void free_chunk_slot(GLuint offset, GLuint count);
 
     const Block *get_block_at_extended(
-        const Chunk::Key &center, const Block *blocks, int x, int y, int z,
-        std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>,
-                           Chunk::Key::Hash> &temp_neighbors) const noexcept;
+        const Key &center, const Block *blocks, int x, int y, int z,
+        std::unordered_map<Key, std::unique_ptr<Block[]>, Key::Hash>
+            &temp_neighbors) const noexcept;
     void push_face(std::vector<Vertex> &out, const Block &blk, int gx, int gy,
                    int gz, int face) const noexcept;
 };

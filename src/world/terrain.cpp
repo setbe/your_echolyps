@@ -70,14 +70,14 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     for (auto &worker : workers) {
         worker = std::thread([this] {
             while (running) {
-                Chunk::Key key;
+                Key key;
                 {
                     std::unique_lock lk(mutex_pending);
                     cv.wait(lk,
                             [&] { return !pending_queue.empty() || !running; });
                     if (!running)
                         break;
-                    key = pending_queue.front();
+                    key = pending_queue.top().key;
                     pending_queue.pop();
                     pending_set.erase(key);
                 }
@@ -120,12 +120,11 @@ void Terrain::bind_vertex_attributes() const noexcept {
                           (void *)offsetof(Vertex, uv));
 }
 
-void Terrain::generate_mesh_for(const Chunk::Key &key, const Block *blocks,
+void Terrain::generate_mesh_for(const Key &key, const Block *blocks,
                                 std::vector<Vertex> &out) const noexcept {
     const unsigned W = Chunk::WIDTH, H = Chunk::HEIGHT, D = Chunk::DEPTH;
 
-    std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>, Chunk::Key::Hash>
-        temp_neighbors;
+    std::unordered_map<Key, std::unique_ptr<Block[]>, Key::Hash> temp_neighbors;
 
     auto get_block = [&](int x, int y, int z) -> const Block * {
         return get_block_at_extended(key, blocks, x, y, z, temp_neighbors);
@@ -154,8 +153,8 @@ void Terrain::generate_mesh_for(const Chunk::Key &key, const Block *blocks,
 }
 
 const Block *Terrain::get_block_at_extended(
-    const Chunk::Key &center, const Block *blocks, int x, int y, int z,
-    std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>, Chunk::Key::Hash>
+    const Key &center, const Block *blocks, int x, int y, int z,
+    std::unordered_map<Key, std::unique_ptr<Block[]>, Key::Hash>
         &temp_neighbors) const noexcept {
     const int W = Chunk::WIDTH, H = Chunk::HEIGHT, D = Chunk::DEPTH;
 
@@ -163,7 +162,7 @@ const Block *Terrain::get_block_at_extended(
         return &blocks[z * W * H + y * W + x];
 
     int nx = x, ny = y, nz = z;
-    Chunk::Key nk = center;
+    Key nk = center;
 
     if (nx < 0) {
         nk.x--;
@@ -243,10 +242,13 @@ void Terrain::push_face(std::vector<Vertex> &out, const Block &blk, int gx,
     }
 }
 
-void Terrain::request_chunk(const Chunk::Key &key) {
+void Terrain::request_chunk(const Key &key, int center_x, int center_y,
+                            int center_z) {
     std::lock_guard lk(mutex_pending);
     if (!block_map.contains(key) && !pending_set.contains(key)) {
-        pending_queue.push(key);
+        int dist = std::abs(center_x - key.x) + std::abs(center_y - key.y) +
+                   std::abs(center_z - key.z);
+        pending_queue.push(PrioritizedKey{dist, key});
         pending_set.insert(key);
         cv.notify_one();
     }
@@ -289,7 +291,7 @@ void Terrain::upload_ready_chunks() {
 }
 
 void Terrain::unload_chunks_not_in(
-    const std::unordered_set<Chunk::Key, Chunk::Key::Hash> &active) {
+    const std::unordered_set<Key, Key::Hash> &active) {
     for (auto it = loaded_chunks.begin(); it != loaded_chunks.end();) {
         if (!active.contains(*it)) {
             const auto &mesh = mesh_map[*it];
