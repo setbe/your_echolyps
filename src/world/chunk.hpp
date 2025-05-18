@@ -2,270 +2,128 @@
 
 #include "../external/PerlinNoise.hpp"
 #include "../external/linmath.hpp"
-
-#include "../resources/texturepack.hpp"
+#include "block.hpp"
 
 #include <assert.h>
-#include <stdio.h>
-#include <string.h>
 #include <vector> // for std::hash
 
 namespace hi {
-struct Block {
-    // 12 bits - actual id, 4 bits - texture layout
-    // 0000'0000'0000|0000 actual id|texture layout
-    uint16_t id;
+struct NoiseSystem {
+    siv::PerlinNoise height;
+    siv::PerlinNoise continent; // large-scale terrain shape
+    siv::PerlinNoise temp;
+    siv::PerlinNoise humid;
+}; // struct NoiseSystem
 
-    // 4 bits - light, 6 - visible faces, 1 - is transparent
-    // 5 - reserved
-    // 0000|0000'00|0 light|faces|is_transparent
-    uint16_t flags;
-
-    // Constructors
-    inline constexpr Block(uint16_t id, uint8_t light, uint8_t faces,
-                           bool transparent = false) noexcept
-        : id{id}, flags{make_flags(light, faces, transparent)} {}
-
-    inline constexpr Block(uint16_t id = 0, uint16_t flags = 0) noexcept
-        : id{id}, flags{flags} {}
-
-    template <uint16_t T_BlockID, uint16_t T_TextureMask>
-    static constexpr uint16_t make_id() noexcept {
-        return static_cast<uint16_t>((T_BlockID & 0x0FFF) |
-                                     ((T_TextureMask & 0x000F) << 12));
-    }
-
-    static constexpr uint16_t make_flags(uint8_t light, uint8_t faces,
-                                         bool transparent) noexcept {
-        return static_cast<uint16_t>((light & 0x0F) | ((faces & 0x3F) << 4) |
-                                     (transparent ? (1 << 10) : 0));
-    }
-
-    // Accessors
-    inline constexpr uint16_t block_id() const noexcept { return id & 0x0FFF; }
-    inline constexpr uint16_t texture_protocol() const noexcept {
-        return (id >> 12) & 0x000F;
-    }
-    inline constexpr uint8_t light() const noexcept { return flags & 0x000F; }
-    inline constexpr uint8_t faces() const noexcept {
-        return (flags >> 4) & 0x003F;
-    }
-    inline constexpr bool transparent() const noexcept {
-        return ((flags >> 10) & 0x0001) != 0;
-    }
-
-    inline void set_block_id(uint16_t block_id) noexcept {
-        id = static_cast<uint16_t>((id & 0xF000) | (block_id & 0x0FFF));
-    }
-    inline void set_texture_protocol(uint16_t proto) noexcept {
-        id = static_cast<uint16_t>((id & 0x0FFF) | ((proto & 0x000F) << 12));
-    }
-    inline void set_light(uint8_t l) noexcept {
-        flags = static_cast<uint16_t>((flags & ~0x000F) | (l & 0x0F));
-    }
-    inline void set_faces(uint8_t f) noexcept {
-        flags = static_cast<uint16_t>((flags & ~0x03F0) | ((f & 0x3F) << 4));
-    }
-    inline void set_transparent(bool t) noexcept {
-        flags = t ? static_cast<uint16_t>(flags | (1 << 10))
-                  : static_cast<uint16_t>(flags & ~(1 << 10));
-    }
-
-    // Packing to float
-    inline float to_float() const noexcept {
-        uint32_t packed = (static_cast<uint32_t>(flags) << 16) | id;
-        float result;
-        memcpy(&result, &packed, sizeof(result));
-        return result;
-    }
-    static inline Block from_float(float f) noexcept {
-        uint32_t packed;
-        memcpy(&packed, &f, sizeof(packed));
-        return {static_cast<uint16_t>(packed & 0xFFFF),
-                static_cast<uint16_t>(packed >> 16)};
-    }
-
-    constexpr static float CUBE_POS[6][18] = {
-        // front  (z+):  BL(0,0,1), BR(1,0,1), TR(1,1,1),   BL, TR, TL
-        {0, 0, 1, 1, 0, 1, /* */ 1, 1, 1, 0, 0, 1, /* */ 1, 1, 1, 0, 1, 1},
-
-        // back   (z-):  BL(1,0,0), BR(0,0,0), TR(0,1,0),   BL, TR, TL
-        {1, 0, 0, 0, 0, 0, /* */ 0, 1, 0, 1, 0, 0, /* */ 0, 1, 0, 1, 1, 0},
-
-        // left   (x-): BL(0,0,0), BR(0,0,1), TR(0,1,1),   BL, TR, TL
-        {0, 0, 0, 0, 0, 1, /* */ 0, 1, 1, 0, 0, 0, /* */ 0, 1, 1, 0, 1, 0},
-
-        // right  (x+):  BL(1,0,1), BR(1,0,0), TR(1,1,0),   BL, TR, TL
-        {1, 0, 1, 1, 0, 0, /* */ 1, 1, 0, 1, 0, 1, /* */ 1, 1, 0, 1, 1, 1},
-
-        // top    (y+):  BL(0,1,1), BR(1,1,1), TR(1,1,0),   BL, TR, TL
-        {0, 1, 1, 1, 1, 1, /* */ 1, 1, 0, 0, 1, 1, /* */ 1, 1, 0, 0, 1, 0},
-
-        // bottom (y-):  BL(0,0,0), BR(1,0,0), TR(1,0,1),   BL, TR, TL
-        {0, 0, 0, 1, 0, 0, /* */ 1, 0, 1, 0, 0, 0, /* */ 1, 0, 1, 0, 0, 1},
-    };
-
-    constexpr static float FACE_UVS[12]{0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1};
-}; // struct Block
-
-struct BlockList {
-    struct Texture {
-        constexpr static uint16_t RESOLUTION = 16;
-        // Texture masks for ID high bits
-        constexpr static uint16_t ONE = 0b1000;
-        constexpr static uint16_t TWO =
-            0b0100; // 1st for top face, 2nd for others faces
-        constexpr static uint16_t THREE_FRONT =
-            0b0010; // 1st top, 2nd front, 3rd others
-        constexpr static uint16_t THREE_SIDES =
-            0b0001; // 1st top; 2nd front, back, left, right; 3rd bottom
-        constexpr static uint16_t SIX = 0b0000; // unique textures per face
-    }; // struct Texture
-
-#define tex(name) (static_cast<uint16_t>(Texturepack::name))
-#define block(id, texture_mask)                                                \
-    {Block::make_id<id, texture_mask>(), 8, 0b1111'1100, false}
-#define var constexpr static Block
-    // BLOCK LIST BEGIN
-    var Air = block(0, Texture::ONE);
-    var Grass = block(tex(grass1), Texture::THREE_SIDES);
-    var Dirt = block(tex(grass3), Texture::ONE);
-    var Cobblestone = block(tex(cobblestone), Texture::ONE);
-    var Tblock = block(tex(t1), Texture::SIX);
-    // BLOCK LIST END
-#undef var
-#undef block
-}; // struct BlockList
-
-// Do not create `Chunk` instances.
-// This struct will be refactored into namespace
-// (if everything will go according to the plan)
-struct Chunk {
-    struct Mesh {
-        unsigned vertex_offset;
-        unsigned vertex_count;
-        float world_x, world_y, world_z;
-    }; // struct Mesh
-    struct Key {
-        int x, y, z;
-        bool operator==(const Key &o) const noexcept {
-            return x == o.x && y == o.y && z == o.z;
-        }
-        struct Hash {
-            size_t operator()(const Key &k) const noexcept {
-                size_t h1 = std::hash<int>{}(k.x);
-                size_t h2 = std::hash<int>{}(k.y);
-                size_t h3 = std::hash<int>{}(k.z);
-                return h1 ^ (h2 << 1) ^ (h3 << 2);
-            }
-        }; // struct Key::Hash
-    }; // struct Key
-    Chunk() = delete; // delete constructor
-    Chunk(const Chunk &) = delete;
-    Chunk(Chunk &&) = delete;
-
-    constexpr static unsigned WIDTH = 32;
-    constexpr static unsigned HEIGHT = 32;
-    constexpr static unsigned DEPTH = 32;
-
-    constexpr static unsigned BLOCKS_PER_CHUNK = WIDTH * HEIGHT * DEPTH;
-
-    inline static unsigned calculate_block_index(unsigned x, unsigned y,
-                                                 unsigned z) noexcept {
-        assert(x < WIDTH && y < HEIGHT && z < DEPTH);
-        return x + y * WIDTH + z * WIDTH * HEIGHT;
-    } // calculate_block_index
-
-    inline static void generate_chunk(unsigned cx, unsigned cy, unsigned cz,
-                                      Block *out, const siv::PerlinNoise &noise,
-                                      unsigned lod_size = 1) noexcept {
-        constexpr int DIRT_DEPTH = 4;
-
-        for (unsigned z = 0; z < DEPTH; z += lod_size)
-            for (unsigned y = 0; y < HEIGHT; y += lod_size)
-                for (unsigned x = 0; x < WIDTH; x += lod_size) {
-                    unsigned idx = calculate_block_index(x, y, z);
-                    int gx = int(cx * WIDTH + x);
-                    int gy = int(cy * HEIGHT + y);
-                    int gz = int(cz * DEPTH + z);
-
-                    double h =
-                        noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 64.0;
-                    int H = int(math::floorf(static_cast<float>(h)));
-
-                    if (gy > H) {
-                        out[idx] = BlockList::Air;
-                    } else if (gy == H) {
-                        out[idx] = BlockList::Grass;
-                    } else if (gy > H - DIRT_DEPTH) {
-                        out[idx] = BlockList::Dirt;
-                    } else {
-                        out[idx] = BlockList::Cobblestone;
-                    }
-                }
-    } // generate_chunk
-
-    inline static bool is_block_on_chunk_edge(int x, int y, int z) noexcept {
-        return x == 0 || x == Chunk::WIDTH - 1 || y == 0 ||
-               y == Chunk::HEIGHT - 1 || z == 0 || z == Chunk::DEPTH - 1;
-    } // is_block_on_chunk_edge
-
-    inline static bool
-    is_chunk_visible(const Mesh &mesh,
-                     const float frustum_planes[6][4]) noexcept {
-        const float x0 = mesh.world_x;
-        const float y0 = mesh.world_y;
-        const float z0 = mesh.world_z;
-        const float x1 = x0 + Chunk::WIDTH;
-        const float y1 = y0 + Chunk::HEIGHT;
-        const float z1 = z0 + Chunk::DEPTH;
-
-        for (int i = 0; i < 6; ++i) {
-            const float *p = frustum_planes[i];
-            const float vx = (p[0] > 0.0f) ? x1 : x0;
-            const float vy = (p[1] > 0.0f) ? y1 : y0;
-            const float vz = (p[2] > 0.0f) ? z1 : z0;
-            if (p[0] * vx + p[1] * vy + p[2] * vz + p[3] < 0.0f)
-                return false;
-        }
-        return true;
-    } // is_chunk_visible
-
-    inline static void
-    extract_frustum_planes(float planes[6][4],
-                           const math::mat4x4 view) noexcept {
-        const float *m = &view[0][0];
-        // left
-        planes[0][0] = m[3] + m[0];
-        planes[0][1] = m[7] + m[4];
-        planes[0][2] = m[11] + m[8];
-        planes[0][3] = m[15] + m[12];
-        // right
-        planes[1][0] = m[3] - m[0];
-        planes[1][1] = m[7] - m[4];
-        planes[1][2] = m[11] - m[8];
-        planes[1][3] = m[15] - m[12];
-        // bottom
-        planes[2][0] = m[3] + m[1];
-        planes[2][1] = m[7] + m[5];
-        planes[2][2] = m[11] + m[9];
-        planes[2][3] = m[15] + m[13];
-        // top
-        planes[3][0] = m[3] - m[1];
-        planes[3][1] = m[7] - m[5];
-        planes[3][2] = m[11] - m[9];
-        planes[3][3] = m[15] - m[13];
-        // near
-        planes[4][0] = m[3] + m[2];
-        planes[4][1] = m[7] + m[6];
-        planes[4][2] = m[11] + m[10];
-        planes[4][3] = m[15] + m[14];
-        // far
-        planes[5][0] = m[3] - m[2];
-        planes[5][1] = m[7] - m[6];
-        planes[5][2] = m[11] - m[10];
-        planes[5][3] = m[15] - m[14];
-    } // extract_frustum_planes
-
-}; // struct Chunk
+enum class BiomeType { Plains, Savannah, Forest, Snow };
 } // namespace hi
+
+namespace hi::Chunk {
+struct Mesh {
+    unsigned vertex_offset;
+    unsigned vertex_count;
+    float world_x, world_y, world_z;
+}; // struct Mesh
+struct Key {
+    int x, y, z;
+    bool operator==(const Key &o) const noexcept {
+        return x == o.x && y == o.y && z == o.z;
+    }
+    struct Hash {
+        size_t operator()(const Key &k) const noexcept {
+            size_t h1 = std::hash<int>{}(k.x);
+            size_t h2 = std::hash<int>{}(k.y);
+            size_t h3 = std::hash<int>{}(k.z);
+            return h1 ^ (h2 << 1) ^ (h3 << 2);
+        }
+    }; // struct Key::Hash
+}; // struct Key
+
+constexpr unsigned WIDTH = 32;
+constexpr unsigned HEIGHT = 32;
+constexpr unsigned DEPTH = 32;
+
+constexpr unsigned BLOCKS_PER_CHUNK = WIDTH * HEIGHT * DEPTH;
+
+inline unsigned calculate_block_index(unsigned x, unsigned y,
+                                      unsigned z) noexcept {
+    assert(x < WIDTH && y < HEIGHT && z < DEPTH);
+    return x + y * WIDTH + z * WIDTH * HEIGHT;
+} // calculate_block_index
+
+void generate_chunk(unsigned cx, unsigned cy, unsigned cz, Block *out,
+                    const NoiseSystem &noise, unsigned lod_size = 1) noexcept;
+
+void generate_block(int gx, int gy, int gz, unsigned idx, Block *out,
+                    const NoiseSystem &noise) noexcept;
+
+inline bool is_block_on_chunk_edge(int x, int y, int z) noexcept {
+    return x == 0 || x == Chunk::WIDTH - 1 || y == 0 ||
+           y == Chunk::HEIGHT - 1 || z == 0 || z == Chunk::DEPTH - 1;
+} // is_block_on_chunk_edge
+
+inline static BiomeType get_biome(double temp, double humid) {
+    if (temp < 0.3)
+        return BiomeType::Snow;
+    if (temp > 0.7 && humid < 0.3)
+        return BiomeType::Savannah;
+    if (humid > 0.6)
+        return BiomeType::Forest;
+    return BiomeType::Plains;
+}
+
+inline bool is_chunk_visible(const Mesh &mesh,
+                             const float frustum_planes[6][4]) noexcept {
+    const float x0 = mesh.world_x;
+    const float y0 = mesh.world_y;
+    const float z0 = mesh.world_z;
+    const float x1 = x0 + Chunk::WIDTH;
+    const float y1 = y0 + Chunk::HEIGHT;
+    const float z1 = z0 + Chunk::DEPTH;
+
+    for (int i = 0; i < 6; ++i) {
+        const float *p = frustum_planes[i];
+        const float vx = (p[0] > 0.0f) ? x1 : x0;
+        const float vy = (p[1] > 0.0f) ? y1 : y0;
+        const float vz = (p[2] > 0.0f) ? z1 : z0;
+        if (p[0] * vx + p[1] * vy + p[2] * vz + p[3] < 0.0f)
+            return false;
+    }
+    return true;
+} // is_chunk_visible
+
+inline void extract_frustum_planes(float planes[6][4],
+                                   const math::mat4x4 view) noexcept {
+    const float *m = &view[0][0];
+    // left
+    planes[0][0] = m[3] + m[0];
+    planes[0][1] = m[7] + m[4];
+    planes[0][2] = m[11] + m[8];
+    planes[0][3] = m[15] + m[12];
+    // right
+    planes[1][0] = m[3] - m[0];
+    planes[1][1] = m[7] - m[4];
+    planes[1][2] = m[11] - m[8];
+    planes[1][3] = m[15] - m[12];
+    // bottom
+    planes[2][0] = m[3] + m[1];
+    planes[2][1] = m[7] + m[5];
+    planes[2][2] = m[11] + m[9];
+    planes[2][3] = m[15] + m[13];
+    // top
+    planes[3][0] = m[3] - m[1];
+    planes[3][1] = m[7] - m[5];
+    planes[3][2] = m[11] - m[9];
+    planes[3][3] = m[15] - m[13];
+    // near
+    planes[4][0] = m[3] + m[2];
+    planes[4][1] = m[7] + m[6];
+    planes[4][2] = m[11] + m[10];
+    planes[4][3] = m[15] + m[14];
+    // far
+    planes[5][0] = m[3] - m[2];
+    planes[5][1] = m[7] - m[6];
+    planes[5][2] = m[11] - m[10];
+    planes[5][3] = m[15] - m[14];
+} // extract_frustum_planes
+} // namespace hi::Chunk

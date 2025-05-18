@@ -10,7 +10,7 @@ P_QUAKE2 = quake-2.png
 # ==== settings ====
 
 TEXTUREPACK = $(T_DEFAULT)
-PALETTE = $(P_QUAKE2)
+PALETTE = 
 
 TEXTURES_ARGS = $(TEXTUREPACK) $(PALETTE)
 

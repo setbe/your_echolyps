@@ -17,11 +17,17 @@
 
 namespace fs = std::filesystem;
 
+// clang-format off
 static const std::vector<std::string> blocks = {
-    "grass1.png", "grass2.png", "grass3.png", "cobblestone.png", "t1.png",
-    "t2.png",     "t3.png",     "t4.png",     "t5.png",          "t6.png"};
+"cobblestone.png",
+"grass_plains_top.png", "grass_plains_side.png", "grass_plains_bottom.png",
+"grass_forest_top.png", "grass_forest_side.png", "grass_forest_bottom.png",
+"grass_snow_top.png", "grass_snow_side.png", "grass_snow_bottom.png",
+"grass_savannah_top.png", "grass_savannah_side.png", "grass_savannah_bottom.png",};
+// clang-format on
+
 static const std::vector<std::string> items = {
-    // empty for now
+    // empty
 };
 
 bool flip_vertical = true;
@@ -100,7 +106,7 @@ void write_texturepack_hpp(const fs::path &output_path,
         auto dot = name.find_last_of('.');
         out << "    " << name.substr(0, dot);
         if (i + 1 < blocks.size())
-            out << "= " << (i + 1) << ",";
+            out << " = " << (i + 1) << ",";
         out << "\n";
     }
     out << "};\n\n";
@@ -130,7 +136,7 @@ to_nearest_palette_color(unsigned char &r, unsigned char &g, unsigned char &b,
         int dr = int(r) - int(palette[i + 0]);
         int dg = int(g) - int(palette[i + 1]);
         int db = int(b) - int(palette[i + 2]);
-        int dist = std::abs(dr) + std::abs(dg) + std::abs(db); // manhattan
+        int dist = std::abs(dr) + std::abs(dg) + std::abs(db);
         if (dist < best_dist) {
             best_dist = dist;
             best_index = i;
@@ -171,14 +177,18 @@ int main(int argc, char *argv[]) {
 
     const int tile_w = 16, tile_h = 16;
     size_t total_tiles = blocks.size() + items.size();
-    int per_row = static_cast<int>(std::ceil(std::sqrt((double)total_tiles)));
-    unsigned atlas_size = nextPowerOfTwo(per_row * tile_w);
-    unsigned atlas_w = atlas_size, atlas_h = atlas_size;
+
+    int tiles_per_row = static_cast<int>(std::ceil(std::sqrt(total_tiles)));
+    size_t padded_tiles = tiles_per_row * tiles_per_row;
+
+    unsigned atlas_w = tiles_per_row * tile_w;
+    unsigned atlas_h = tiles_per_row * tile_h;
+
     std::vector<unsigned char> atlas(atlas_w * atlas_h * 4, 0);
 
     auto blit = [&](const Image &img, size_t idx) {
-        int row = int(idx) / per_row;
-        int col = int(idx) % per_row;
+        int row = int(idx) / tiles_per_row;
+        int col = int(idx) % tiles_per_row;
         for (int y = 0; y < tile_h; ++y) {
             for (int x = 0; x < tile_w; ++x) {
                 size_t src = (y * tile_w + x) * 4;
@@ -210,6 +220,12 @@ int main(int argc, char *argv[]) {
         blit(
             load_or_empty(texturepack_dir / "items" / items[i], tile_w, tile_h),
             blocks.size() + i);
+    }
+
+    for (size_t i = total_tiles; i < padded_tiles; ++i) {
+        Image empty{tile_w, tile_h,
+                    std::vector<unsigned char>(tile_w * tile_h * 4, 0)};
+        blit(empty, i);
     }
 
     fs::path output_hpp =

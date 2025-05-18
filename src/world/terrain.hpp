@@ -1,8 +1,6 @@
 #pragma once
 
 #include "../engine/opengl.hpp"
-#include "../external/PerlinNoise.hpp"
-#include "../external/linmath.hpp"
 #include "chunk.hpp"
 
 #include <array>
@@ -21,12 +19,12 @@ namespace hi {
 struct Vertex {
     math::vec4 position_block;
     math::vec2 uv;
-};
+}; // struct Vertex
 
 struct FreeSlot {
     GLuint offset;
     GLuint count;
-};
+}; // struct FreeSlot
 
 struct PrioritizedKey {
     int priority; // less is better
@@ -36,18 +34,18 @@ struct PrioritizedKey {
         // less priority handles earlier
         return priority > rhs.priority; // std::priority_queue — max heap
     }
-};
+}; // struct PrioritizedKey
 
 struct Terrain {
-    constexpr static unsigned char THREADS_NUM = 5;
-    static constexpr int STREAM_RADIUS = 6;
-    static constexpr size_t TOTAL_VERT_CAP =
-        Chunk::BLOCKS_PER_CHUNK * (STREAM_RADIUS * 2) * (STREAM_RADIUS * 2) *
-        (STREAM_RADIUS * 2) * 6 /* Faces per cube */ / 4 /* Coefficient */;
+    constexpr static unsigned char THREADS_NUM = 6;
+    static constexpr int STREAM_RADIUS = 10;
+    static constexpr size_t TOTAL_VERT_CAP = UINT32_MAX / sizeof(Vertex);
+    // Chunk::BLOCKS_PER_CHUNK * (STREAM_RADIUS * 2) * (STREAM_RADIUS * 2) *
+    // (STREAM_RADIUS * 2) * 6 /* Faces per cube */ / 4 /* Coefficient */;
 
     using Key = Chunk::Key;
 
-    siv::PerlinNoise noise;
+    NoiseSystem noise;
 
     Vertex *mesh_buffer = nullptr;
 
@@ -66,6 +64,7 @@ struct Terrain {
     std::vector<FreeSlot> free_slots;
     GLuint used_vertices = 0;
 
+    std::atomic<Chunk::Key> center_chunk;
     std::priority_queue<PrioritizedKey> pending_queue;
     std::unordered_set<Key, Key::Hash> pending_set;
     std::queue<std::pair<Key, std::vector<Vertex>>> ready;

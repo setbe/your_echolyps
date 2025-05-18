@@ -33,10 +33,10 @@ MINI_CXXFLAGS = \
   -fno-ident
 
 # Linker flags
-DEBUG_LDFLAGS = -lX11 -lGL -ldl
-RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
-PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
-MINI_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl
+DEBUG_LDFLAGS = -lX11 -lGL -ldl -latomic
+RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl -latomic
+PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl -latomic
+MINI_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl -latomic
 
 default: shaders clean run
 

@@ -29,7 +29,7 @@ struct World {
 
     void update_projection(int width, int height) noexcept {
         math::mat4x4_perspective(projection, math::radians(camera.fov),
-                                 float(width) / float(height), 0.1f, 512.f);
+                                 float(width) / float(height), 0.1f, 1024.f);
     }
 
     void camera_rotate(int xoffset, int yoffset) noexcept {
@@ -57,6 +57,8 @@ struct World {
         center_cx = cx;
         center_cy = cy;
         center_cz = cz;
+
+        terrain.center_chunk.store(Chunk::Key{cx, cy, cz});
 
         std::unordered_set<Chunk::Key, Chunk::Key::Hash> needed;
 

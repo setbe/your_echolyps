@@ -1,7 +1,6 @@
 #include "terrain.hpp"
-#include "../higui/debug.hpp"
 #include "../resources/shaders.hpp"
-#include "../resources/texturepack.hpp"
+#include "block_list.hpp"
 
 namespace hi {
 
@@ -81,6 +80,14 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                     pending_queue.pop();
                     pending_set.erase(key);
                 }
+
+                // Check old tasks
+                Key center = center_chunk.load();
+                int dist = std::abs(center.x - key.x) +
+                           std::abs(center.y - key.y) +
+                           std::abs(center.z - key.z);
+                if (dist > STREAM_RADIUS)
+                    continue;
 
                 auto blocks =
                     std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
@@ -208,23 +215,12 @@ const Block *Terrain::get_block_at_extended(
 
 void Terrain::push_face(std::vector<Vertex> &out, const Block &blk, int gx,
                         int gy, int gz, int face) const noexcept {
-    constexpr int TPR =
-        TEXTUREPACK_ATLAS_WIDTH / BlockList::Texture::RESOLUTION;
-    uint32_t mask = blk.texture_protocol();
-    uint32_t bid = blk.block_id() - 1;
-    uint32_t off = 0;
+    using Tex = Block::TextureProtocol;
 
-    using Texture = BlockList::Texture;
-    if (mask == Texture::ONE)
-        off = 0;
-    else if (mask == Texture::TWO)
-        off = (face == 4 || face == 5) ? 0 : 1;
-    else if (mask == Texture::THREE_FRONT)
-        off = (face == 4 || face == 5) ? 0 : (face == 0 ? 1 : 2);
-    else if (mask == Texture::THREE_SIDES)
-        off = (face == 4 ? 0 : face == 5 ? 2 : 1);
-    else
-        off = face;
+    constexpr int TPR = TEXTUREPACK_ATLAS_WIDTH / Tex::RESOLUTION;
+
+    uint32_t bid = blk.block_id() - 1;
+    uint32_t off = Tex::resolve_offset(blk.texture_protocol(), face);
 
     uint32_t tex = bid + off;
     uint32_t tx = tex % TPR, ty = tex / TPR;
@@ -282,10 +278,6 @@ void Terrain::upload_ready_chunks() {
                         /* world_x       */ float(int(key.x * Chunk::WIDTH)),
                         /* world_y       */ float(int(key.y * Chunk::HEIGHT)),
                         /* world_z       */ float(int(key.z * Chunk::DEPTH))};
-        debug_print("[upload_ready_chunks] added mesh for chunk (%d %d %d), "
-                    "vertex_count = %zu\n",
-                    key.x, key.y, key.z, verts.size());
-
         loaded_chunks.insert(key);
     }
 }
