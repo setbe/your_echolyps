@@ -22,7 +22,7 @@ struct World {
 
     World() noexcept : camera{}, terrain{} {
         camera.position[0] = 0.f;
-        camera.position[1] = 300.f;
+        camera.position[1] = 100.f;
         camera.position[2] = 0.f;
         update_pos();
     }

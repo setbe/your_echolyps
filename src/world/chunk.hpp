@@ -165,7 +165,7 @@ struct Chunk {
     Chunk(Chunk &&) = delete;
 
     constexpr static unsigned WIDTH = 32;
-    constexpr static unsigned HEIGHT = 64;
+    constexpr static unsigned HEIGHT = 32;
     constexpr static unsigned DEPTH = 32;
 
     constexpr static unsigned BLOCKS_PER_CHUNK = WIDTH * HEIGHT * DEPTH;
