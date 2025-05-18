@@ -241,34 +241,30 @@ static inline unsigned char get_keycode(KeySym ks) {
     /* ASCII
         XK_space      0x0020
         ...
-        XK_asciitilde 0x007e (U+007E TILDE)
-    */
+        XK_asciitilde 0x007e (U+007E TILDE) */
 
     /* MODIFIERS
          XK_Shift_L    0xffe1 // 65505
          ...
-         XK_Hyper_R    0xffee // 65518
-     */
+         XK_Hyper_R    0xffee // 65518 */
 
     /* FUNCTIONAL
        XK_F1  0xffbe // 65470
        ...
-       XK_F11 0xffc8 // 65480
-   */
+       XK_F11 0xffc8 // 65480 */
 
     /* TTY
          XK_BackSpace 0xff08   // 652,88
                                // empty 652,92 (1 char)
                                // empty 652,94-652,98 (5 chars)
                                // empty 653,02 - 653,06 (5 chars)
-         XK_Escape 0xff1b      // 653,07
-     */
+         XK_Escape 0xff1b      // 653,07 */
 
     /* MOTION
        XK_Home  0xff50 // 65360
        ...
-       XK_Down  0xff54 // 65364
-   */
+       XK_Down  0xff54 // 65364 */
+
     struct RangeShort {
         unsigned short begin;
         unsigned short end;

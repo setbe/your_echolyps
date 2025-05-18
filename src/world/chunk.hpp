@@ -190,7 +190,7 @@ struct Chunk {
                     int gz = int(cz * DEPTH + z);
 
                     double h =
-                        noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 522.0;
+                        noise.octave2D_01(gx * 0.01, gz * 0.01, 4) * 64.0;
                     int H = int(math::floorf(static_cast<float>(h)));
 
                     if (gy > H) {

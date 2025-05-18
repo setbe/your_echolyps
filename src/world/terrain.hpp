@@ -5,6 +5,7 @@
 #include "../external/linmath.hpp"
 #include "chunk.hpp"
 
+#include <array>
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
@@ -28,6 +29,7 @@ struct FreeSlot {
 };
 
 struct Terrain {
+    constexpr static unsigned char THREADS_NUM = 2;
     static constexpr int STREAM_RADIUS = 6;
     static constexpr size_t TOTAL_VERT_CAP =
         Chunk::BLOCKS_PER_CHUNK * (STREAM_RADIUS * 2) * (STREAM_RADIUS * 2) *
@@ -60,7 +62,7 @@ struct Terrain {
     std::mutex mutex_ready;
     std::condition_variable cv;
     std::atomic<bool> running = true;
-    std::thread worker;
+    std::array<std::thread, THREADS_NUM> workers;
 
     Terrain() noexcept;
     ~Terrain() noexcept;
@@ -81,6 +83,13 @@ struct Terrain {
                            std::vector<Vertex> &out) const noexcept;
     bool allocate_chunk_slot(GLuint count, GLuint &out_offset);
     void free_chunk_slot(GLuint offset, GLuint count);
+
+    const Block *get_block_at_extended(
+        const Chunk::Key &center, const Block *blocks, int x, int y, int z,
+        std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>,
+                           Chunk::Key::Hash> &temp_neighbors) const noexcept;
+    void push_face(std::vector<Vertex> &out, const Block &blk, int gx, int gy,
+                   int gz, int face) const noexcept;
 };
 
 } // namespace hi

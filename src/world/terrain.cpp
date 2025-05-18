@@ -67,42 +67,47 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                  atlas_pixels);
     hi::free(atlas_pixels, TEX_SIZE);
 
-    worker = std::thread([this] {
-        while (running) {
-            Chunk::Key key;
-            {
-                std::unique_lock lk(mutex_pending);
-                cv.wait(lk, [&] { return !pending_queue.empty() || !running; });
-                if (!running)
-                    break;
-                key = pending_queue.front();
-                pending_queue.pop();
-                pending_set.erase(key);
-            }
+    for (auto &worker : workers) {
+        worker = std::thread([this] {
+            while (running) {
+                Chunk::Key key;
+                {
+                    std::unique_lock lk(mutex_pending);
+                    cv.wait(lk,
+                            [&] { return !pending_queue.empty() || !running; });
+                    if (!running)
+                        break;
+                    key = pending_queue.front();
+                    pending_queue.pop();
+                    pending_set.erase(key);
+                }
 
-            auto blocks = std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
-            Chunk::generate_chunk(key.x, key.y, key.z, blocks.get(), noise);
-            std::vector<Vertex> mesh;
-            generate_mesh_for(key, blocks.get(), mesh);
+                auto blocks =
+                    std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
+                Chunk::generate_chunk(key.x, key.y, key.z, blocks.get(), noise);
+                std::vector<Vertex> mesh;
+                generate_mesh_for(key, blocks.get(), mesh);
 
-            {
-                std::lock_guard lk_ready(mutex_ready);
-                ready.push({key, std::move(mesh)});
-            }
+                {
+                    std::lock_guard lk_ready(mutex_ready);
+                    ready.push({key, std::move(mesh)});
+                }
 
-            {
-                std::lock_guard lk_pending(mutex_pending);
-                block_map.emplace(key, std::move(blocks));
+                {
+                    std::lock_guard lk_pending(mutex_pending);
+                    block_map.emplace(key, std::move(blocks));
+                }
             }
-        }
-    });
+        });
+    }
 }
 
 Terrain::~Terrain() noexcept {
     running = false;
     cv.notify_all();
-    if (worker.joinable())
-        worker.join();
+    for (auto &worker : workers)
+        if (worker.joinable())
+            worker.join();
     hi::free(mesh_buffer, TOTAL_VERT_CAP * sizeof(Vertex));
 }
 
@@ -118,6 +123,14 @@ void Terrain::bind_vertex_attributes() const noexcept {
 void Terrain::generate_mesh_for(const Chunk::Key &key, const Block *blocks,
                                 std::vector<Vertex> &out) const noexcept {
     const unsigned W = Chunk::WIDTH, H = Chunk::HEIGHT, D = Chunk::DEPTH;
+
+    std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>, Chunk::Key::Hash>
+        temp_neighbors;
+
+    auto get_block = [&](int x, int y, int z) -> const Block * {
+        return get_block_at_extended(key, blocks, x, y, z, temp_neighbors);
+    };
+
     for (unsigned z = 0; z < D; ++z)
         for (unsigned y = 0; y < H; ++y)
             for (unsigned x = 0; x < W; ++x) {
@@ -131,61 +144,103 @@ void Terrain::generate_mesh_for(const Chunk::Key &key, const Block *blocks,
                     int dx = (face == 2) ? -1 : (face == 3) ? 1 : 0;
                     int dy = (face == 5) ? -1 : (face == 4) ? 1 : 0;
                     int dz = (face == 1) ? -1 : (face == 0) ? 1 : 0;
-                    int nx = int(x) + dx, ny = int(y) + dy, nz = int(z) + dz;
-
-                    bool isAir = true;
-                    if (nx >= 0 && nx < int(W) && ny >= 0 && ny < int(H) &&
-                        nz >= 0 && nz < int(D)) {
-                        const Block &nbr = blocks[nz * W * H + ny * W + nx];
-                        isAir = (nbr.block_id() == BlockList::Air.block_id());
-                    }
-
-                    if (!isAir)
+                    const Block *nbr = get_block(x + dx, y + dy, z + dz);
+                    if (nbr && nbr->block_id() != BlockList::Air.block_id())
                         continue;
 
-                    for (int i = 0; i < 6; ++i) {
-                        Vertex v;
-                        const float *POS = Block::CUBE_POS[face];
-                        v.position_block[0] = gx + POS[i * 3 + 0];
-                        v.position_block[1] = gy + POS[i * 3 + 1];
-                        v.position_block[2] = gz + POS[i * 3 + 2];
-                        v.position_block[3] = blk.to_float();
-
-                        constexpr int TPR = TEXTUREPACK_ATLAS_WIDTH /
-                                            BlockList::Texture::RESOLUTION;
-                        uint32_t mask = blk.texture_protocol();
-                        uint32_t bid = blk.block_id() - 1;
-
-                        // Echolyps's texture protocol
-                        uint32_t off = 0;
-                        using Texture = BlockList::Texture;
-                        if (mask == Texture::ONE)
-                            off = 0;
-                        else if (mask == Texture::TWO)
-                            off = (face == 4 || face == 5) ? 0 : 1;
-                        else if (mask == Texture::THREE_FRONT)
-                            off = (face == 4 || face == 5)
-                                      ? 0
-                                      : (face == 0 ? 1 : 2);
-                        else if (mask == Texture::THREE_SIDES)
-                            off = (face == 4 ? 0 : face == 5 ? 2 : 1);
-                        else
-                            off = face;
-
-                        uint32_t tex = bid + off;
-                        uint32_t tx = tex % TPR, ty = tex / TPR;
-                        v.uv[0] =
-                            (tx + Block::FACE_UVS[i * 2 + 0]) / float(TPR);
-                        v.uv[1] =
-                            (ty + Block::FACE_UVS[i * 2 + 1]) / float(TPR);
-                        out.push_back(v);
-                    }
+                    push_face(out, blk, gx, gy, gz, face);
                 }
             }
+}
 
-    // if (key.x < 0 || key.y < 0 || key.z < 0)
-    //    printf("[generate_mesh] key = (%d %d %d), vertices = %zu\n", key.x,
-    //           key.y, key.z, out.size());
+const Block *Terrain::get_block_at_extended(
+    const Chunk::Key &center, const Block *blocks, int x, int y, int z,
+    std::unordered_map<Chunk::Key, std::unique_ptr<Block[]>, Chunk::Key::Hash>
+        &temp_neighbors) const noexcept {
+    const int W = Chunk::WIDTH, H = Chunk::HEIGHT, D = Chunk::DEPTH;
+
+    if (x >= 0 && x < W && y >= 0 && y < H && z >= 0 && z < D)
+        return &blocks[z * W * H + y * W + x];
+
+    int nx = x, ny = y, nz = z;
+    Chunk::Key nk = center;
+
+    if (nx < 0) {
+        nk.x--;
+        nx += W;
+    } else if (nx >= W) {
+        nk.x++;
+        nx -= W;
+    }
+    if (ny < 0) {
+        nk.y--;
+        ny += H;
+    } else if (ny >= H) {
+        nk.y++;
+        ny -= H;
+    }
+    if (nz < 0) {
+        nk.z--;
+        nz += D;
+    } else if (nz >= D) {
+        nk.z++;
+        nz -= D;
+    }
+
+    auto it = block_map.find(nk);
+    const Block *neighbor = nullptr;
+
+    if (it != block_map.end()) {
+        neighbor = it->second.get();
+    } else {
+        auto temp_it = temp_neighbors.find(nk);
+        if (temp_it == temp_neighbors.end()) {
+            auto tmp = std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
+            Chunk::generate_chunk(nk.x, nk.y, nk.z, tmp.get(), noise);
+            neighbor = tmp.get();
+            temp_neighbors.emplace(nk, std::move(tmp));
+        } else {
+            neighbor = temp_it->second.get();
+        }
+    }
+
+    return &neighbor[nz * W * H + ny * W + nx];
+}
+
+void Terrain::push_face(std::vector<Vertex> &out, const Block &blk, int gx,
+                        int gy, int gz, int face) const noexcept {
+    constexpr int TPR =
+        TEXTUREPACK_ATLAS_WIDTH / BlockList::Texture::RESOLUTION;
+    uint32_t mask = blk.texture_protocol();
+    uint32_t bid = blk.block_id() - 1;
+    uint32_t off = 0;
+
+    using Texture = BlockList::Texture;
+    if (mask == Texture::ONE)
+        off = 0;
+    else if (mask == Texture::TWO)
+        off = (face == 4 || face == 5) ? 0 : 1;
+    else if (mask == Texture::THREE_FRONT)
+        off = (face == 4 || face == 5) ? 0 : (face == 0 ? 1 : 2);
+    else if (mask == Texture::THREE_SIDES)
+        off = (face == 4 ? 0 : face == 5 ? 2 : 1);
+    else
+        off = face;
+
+    uint32_t tex = bid + off;
+    uint32_t tx = tex % TPR, ty = tex / TPR;
+
+    for (int i = 0; i < 6; ++i) {
+        Vertex v;
+        const float *POS = Block::CUBE_POS[face];
+        v.position_block[0] = gx + POS[i * 3 + 0];
+        v.position_block[1] = gy + POS[i * 3 + 1];
+        v.position_block[2] = gz + POS[i * 3 + 2];
+        v.position_block[3] = blk.to_float();
+        v.uv[0] = (tx + Block::FACE_UVS[i * 2 + 0]) / float(TPR);
+        v.uv[1] = (ty + Block::FACE_UVS[i * 2 + 1]) / float(TPR);
+        out.push_back(v);
+    }
 }
 
 void Terrain::request_chunk(const Chunk::Key &key) {
