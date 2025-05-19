@@ -28,18 +28,10 @@ using T = Texturepack;
 var Air =         {0, 8, 0b1111'1100, true};
 
 var Cobblestone = make(T::cobblestone, ONE);
+var Water = make(T::water, ONE, true);
 
-var Grass_Plains = make(T::grass_plains_top, THREE_SIDES);
-var Dirt_Plains = make(T::grass_plains_bottom, ONE);
-
-var Grass_Forest = make(T::grass_forest_top, THREE_SIDES);
-var Dirt_Forest = make(T::grass_forest_bottom, ONE);
-
-var Grass_Snow = make(T::grass_snow_top, THREE_SIDES);
-var Dirt_Snow = make(T::grass_snow_bottom, ONE);
-
-var Grass_Savannah = make(T::grass_savannah_top, THREE_SIDES);
-var Dirt_Savannah = make(T::grass_savannah_bottom, ONE);
+var Grass = make(T::grass_top, THREE_SIDES);
+var Dirt = make(T::grass_bottom, ONE);
 
 // BLOCK LIST END
 // clang-format on

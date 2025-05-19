@@ -10,12 +10,7 @@
 namespace hi {
 struct NoiseSystem {
     siv::PerlinNoise height;
-    siv::PerlinNoise continent; // large-scale terrain shape
-    siv::PerlinNoise temp;
-    siv::PerlinNoise humid;
 }; // struct NoiseSystem
-
-enum class BiomeType { Plains, Savannah, Forest, Snow };
 } // namespace hi
 
 namespace hi::Chunk {
@@ -61,16 +56,6 @@ inline bool is_block_on_chunk_edge(int x, int y, int z) noexcept {
     return x == 0 || x == Chunk::WIDTH - 1 || y == 0 ||
            y == Chunk::HEIGHT - 1 || z == 0 || z == Chunk::DEPTH - 1;
 } // is_block_on_chunk_edge
-
-inline static BiomeType get_biome(double temp, double humid) {
-    if (temp < 0.3)
-        return BiomeType::Snow;
-    if (temp > 0.7 && humid < 0.3)
-        return BiomeType::Savannah;
-    if (humid > 0.6)
-        return BiomeType::Forest;
-    return BiomeType::Plains;
-}
 
 inline bool is_chunk_visible(const Mesh &mesh,
                              const float frustum_planes[6][4]) noexcept {

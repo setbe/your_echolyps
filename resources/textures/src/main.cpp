@@ -20,10 +20,8 @@ namespace fs = std::filesystem;
 // clang-format off
 static const std::vector<std::string> blocks = {
 "cobblestone.png",
-"grass_plains_top.png", "grass_plains_side.png", "grass_plains_bottom.png",
-"grass_forest_top.png", "grass_forest_side.png", "grass_forest_bottom.png",
-"grass_snow_top.png", "grass_snow_side.png", "grass_snow_bottom.png",
-"grass_savannah_top.png", "grass_savannah_side.png", "grass_savannah_bottom.png",};
+"water.png",
+"grass_top.png", "grass_side.png", "grass_bottom.png",};
 // clang-format on
 
 static const std::vector<std::string> items = {

@@ -150,8 +150,12 @@ void Terrain::generate_mesh_for(const Key &key, const Block *blocks,
                     int dx = (face == 2) ? -1 : (face == 3) ? 1 : 0;
                     int dy = (face == 5) ? -1 : (face == 4) ? 1 : 0;
                     int dz = (face == 1) ? -1 : (face == 0) ? 1 : 0;
-                    const Block *nbr = get_block(x + dx, y + dy, z + dz);
-                    if (nbr && nbr->block_id() != BlockList::Air.block_id())
+                    const Block *neighbour = get_block(x + dx, y + dy, z + dz);
+
+                    const uint16_t neighbour_id = neighbour->block_id();
+                    constexpr uint16_t air_id = BlockList::Air.block_id();
+                    constexpr uint16_t water_id = BlockList::Water.block_id();
+                    if (neighbour && (neighbour_id != air_id))
                         continue;
 
                     push_face(out, blk, gx, gy, gz, face);
