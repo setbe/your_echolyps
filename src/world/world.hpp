@@ -43,7 +43,9 @@ struct World {
 
     void update() noexcept { terrain.update(center_cx, center_cy, center_cz); }
 
-    void draw() const noexcept { terrain.draw(projection, view); }
+    void draw() const noexcept {
+        terrain.draw(projection, view, camera.position);
+    }
 
     inline int chunk_coord(float pos, int size) const {
         return static_cast<int>(math::floorf(pos / float(size)));

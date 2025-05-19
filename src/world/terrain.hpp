@@ -38,17 +38,15 @@ struct Terrain {
         }
     }; // struct PrioritizedKey
 
-    constexpr static unsigned char THREADS_NUM = 6;
-    static constexpr int STREAM_RADIUS = 12;
-    static constexpr size_t TOTAL_VERT_CAP = UINT32_MAX / sizeof(Vertex);
-    // Chunk::BLOCKS_PER_CHUNK * (STREAM_RADIUS * 2) * (STREAM_RADIUS * 2) *
-    // (STREAM_RADIUS * 2) * 6 /* Faces per cube */ / 4 /* Coefficient */;
+    constexpr static unsigned char THREADS_NUM = 4;
+    static constexpr int STREAM_RADIUS = 16;
+    static constexpr unsigned MAX_LOADED_CHUNKS = 512;
+    static constexpr unsigned TOTAL_VERT_CAP =
+        UINT32_MAX / 2.2f / sizeof(Vertex);
 
     using Key = Chunk::Key;
 
     NoiseSystem noise;
-
-    Vertex *mesh_buffer = nullptr;
 
     Opengl::VAO vao;
     Opengl::VBO vbo;
@@ -92,8 +90,8 @@ struct Terrain {
                        int center_z);
     void upload_ready_chunks();
     void unload_chunks_not_in(const std::unordered_set<Key, Key::Hash> &active);
-    void draw(const math::mat4x4 projection,
-              const math::mat4x4 view) const noexcept;
+    void draw(const math::mat4x4 projection, const math::mat4x4 view,
+              const math::vec3 camera_pos) const noexcept;
     void update(int center_cx, int center_cy, int center_cz) noexcept;
 
   private:

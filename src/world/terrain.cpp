@@ -35,11 +35,7 @@ void Terrain::free_chunk_slot(GLuint offset, GLuint count) {
 }
 
 Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
-    mesh_buffer =
-        static_cast<Vertex *>(hi::alloc(TOTAL_VERT_CAP * sizeof(Vertex)));
-    if (!mesh_buffer)
-        panic(Result{Stage::Game, Error::ChunkMemoryAlloc});
-
+    // vao, vbo
     vbo.bind(GL_ARRAY_BUFFER);
     vbo.buffer_data(GL_ARRAY_BUFFER, TOTAL_VERT_CAP * sizeof(Vertex), nullptr,
                     GL_STATIC_DRAW);
@@ -48,12 +44,14 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     vbo.bind(GL_ARRAY_BUFFER);
     bind_vertex_attributes();
 
+    // shader program
     shader_program.use();
     projection_location =
         glGetUniformLocation(shader_program.get(), "projection");
     view_location = glGetUniformLocation(shader_program.get(), "view");
     atlas_location = glGetUniformLocation(shader_program.get(), "atlas");
 
+    // prepare texture buffer
     constexpr unsigned TEX_SIZE =
         TEXTUREPACK_ATLAS_WIDTH * TEXTUREPACK_ATLAS_HEIGHT * 4;
     unsigned char *atlas_pixels =
@@ -62,6 +60,7 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
         panic(Result{Stage::Game, Error::TexturepackMemoryAlloc});
     decompress_atlas(atlas_pixels);
 
+    // create texture atlas
     atlas.bind(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -70,6 +69,7 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                  atlas_pixels);
     hi::free(atlas_pixels, TEX_SIZE);
 
+    // give the job for the workers
     for (auto &worker : workers) {
         worker = std::thread([this] {
             while (running) {
@@ -97,6 +97,8 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                     std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
                 Chunk::generate_chunk(key.x, key.y, key.z, blocks.get(), noise);
                 std::vector<Vertex> mesh;
+                mesh.reserve(2048);
+
                 generate_mesh_for(key, blocks.get(), mesh);
 
                 {
@@ -119,7 +121,6 @@ Terrain::~Terrain() noexcept {
     for (auto &worker : workers)
         if (worker.joinable())
             worker.join();
-    hi::free(mesh_buffer, TOTAL_VERT_CAP * sizeof(Vertex));
 }
 
 void Terrain::bind_vertex_attributes() const noexcept {
@@ -133,10 +134,12 @@ void Terrain::bind_vertex_attributes() const noexcept {
 
 void Terrain::request_chunk(const Key &key, int center_x, int center_y,
                             int center_z) {
+    int dist = std::abs(center_x - key.x) + std::abs(center_y - key.y) +
+               std::abs(center_z - key.z);
+    if (dist > STREAM_RADIUS)
+        return;
     std::lock_guard lk(mutex_pending);
     if (!block_map.contains(key) && !pending_set.contains(key)) {
-        int dist = std::abs(center_x - key.x) + std::abs(center_y - key.y) +
-                   std::abs(center_z - key.z);
         pending_queue.push(PrioritizedKey{dist, key});
         pending_set.insert(key);
         cv.notify_one();
@@ -155,9 +158,6 @@ void Terrain::upload_ready_chunks() {
                     key.y, key.z);
             continue;
         }
-
-        memcpy(mesh_buffer + offset, verts.data(),
-               verts.size() * sizeof(Vertex));
 
         vbo.bind(GL_ARRAY_BUFFER);
         vbo.sub_data(/* target */ GL_ARRAY_BUFFER,
@@ -190,8 +190,16 @@ void Terrain::unload_chunks_not_in(
     }
 }
 
-void Terrain::draw(const math::mat4x4 projection,
-                   const math::mat4x4 view) const noexcept {
+inline float distance_squared(const math::vec3 a, float x, float y,
+                              float z) noexcept {
+    float dx = a[0] - x;
+    float dy = a[1] - y;
+    float dz = a[2] - z;
+    return dx * dx + dy * dy + dz * dz;
+}
+
+void Terrain::draw(const math::mat4x4 projection, const math::mat4x4 view,
+                   const math::vec3 camera_pos) const noexcept {
     shader_program.use();
     vao.bind();
 
@@ -220,19 +228,38 @@ void Terrain::draw(const math::mat4x4 projection,
         Chunk::extract_frustum_planes(frustum_planes, frustum_view);
     }
 
-    // render chunks
+    // sort chunks
+    std::vector<const Chunk::Mesh *> drawlist;
+    drawlist.reserve(mesh_map.size());
+
     for (const auto &[key, mesh] : mesh_map) {
-        if (!Chunk::is_chunk_visible(mesh, frustum_planes) ||
-            mesh.vertex_count == 0)
+        if (mesh.vertex_count == 0)
             continue;
-        glDrawArrays(GL_TRIANGLES, mesh.vertex_offset, mesh.vertex_count);
+        if (!Chunk::is_chunk_visible(mesh, frustum_planes))
+            continue;
+
+        drawlist.push_back(&mesh);
+    }
+
+    std::sort(drawlist.begin(), drawlist.end(),
+              [&](const auto *a, const auto *b) {
+                  float da = distance_squared(camera_pos, a->world_x,
+                                              a->world_y, a->world_z);
+                  float db = distance_squared(camera_pos, b->world_x,
+                                              b->world_y, b->world_z);
+                  return da < db; // або > для back-to-front
+              });
+
+    // render chunks
+    for (const auto *mesh : drawlist) {
+        glDrawArrays(GL_TRIANGLES, mesh->vertex_offset, mesh->vertex_count);
     }
 }
 
 void Terrain::update(int center_cx, int center_cy, int center_cz) noexcept {
     // 1. Formation of chunks by waves
     if (filling_pending) {
-        constexpr int max_radius = Terrain::STREAM_RADIUS;
+
         int cx = pending_center.x;
         int cy = pending_center.y;
         int cz = pending_center.z;
@@ -250,12 +277,12 @@ void Terrain::update(int center_cx, int center_cy, int center_cz) noexcept {
 
         ++wave_radius;
 
-        if (wave_radius > max_radius) {
+        if (wave_radius > STREAM_RADIUS) {
             filling_pending = false;
 
             std::unordered_set<Chunk::Key, Chunk::Key::Hash> needed(
                 pending_to_request.begin(), pending_to_request.end());
-            if (loaded_chunks.size() < 2000)
+            if (loaded_chunks.size() > MAX_LOADED_CHUNKS)
                 unload_chunks_not_in(needed);
 
             pending_index = 0;
