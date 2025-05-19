@@ -19,26 +19,27 @@ namespace hi {
 struct Vertex {
     math::vec4 position_block;
     math::vec2 uv;
+    math::vec2 padding;
 }; // struct Vertex
 
-struct FreeSlot {
-    GLuint offset;
-    GLuint count;
-}; // struct FreeSlot
-
-struct PrioritizedKey {
-    int priority; // less is better
-    Chunk::Key key;
-
-    bool operator<(const PrioritizedKey &rhs) const noexcept {
-        // less priority handles earlier
-        return priority > rhs.priority; // std::priority_queue — max heap
-    }
-}; // struct PrioritizedKey
-
 struct Terrain {
+    struct FreeSlot {
+        GLuint offset;
+        GLuint count;
+    }; // struct FreeSlot
+
+    struct PrioritizedKey {
+        int priority; // less is better
+        Chunk::Key key;
+
+        bool operator<(const PrioritizedKey &rhs) const noexcept {
+            // less priority handles earlier
+            return priority > rhs.priority; // std::priority_queue — max heap
+        }
+    }; // struct PrioritizedKey
+
     constexpr static unsigned char THREADS_NUM = 6;
-    static constexpr int STREAM_RADIUS = 10;
+    static constexpr int STREAM_RADIUS = 12;
     static constexpr size_t TOTAL_VERT_CAP = UINT32_MAX / sizeof(Vertex);
     // Chunk::BLOCKS_PER_CHUNK * (STREAM_RADIUS * 2) * (STREAM_RADIUS * 2) *
     // (STREAM_RADIUS * 2) * 6 /* Faces per cube */ / 4 /* Coefficient */;
@@ -71,6 +72,12 @@ struct Terrain {
     std::mutex mutex_pending;
     std::mutex mutex_ready;
 
+    std::vector<Chunk::Key> pending_to_request;
+    size_t pending_index = 0;
+    int wave_radius = 0;
+    bool filling_pending = false;
+    Chunk::Key pending_center;
+
     std::condition_variable cv;
     std::atomic<bool> running = true;
     std::array<std::thread, THREADS_NUM> workers;
@@ -87,6 +94,7 @@ struct Terrain {
     void unload_chunks_not_in(const std::unordered_set<Key, Key::Hash> &active);
     void draw(const math::mat4x4 projection,
               const math::mat4x4 view) const noexcept;
+    void update(int center_cx, int center_cy, int center_cz) noexcept;
 
   private:
     void bind_vertex_attributes() const noexcept;

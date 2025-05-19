@@ -15,7 +15,7 @@ void hi::Engine::update() noexcept {
     // Render debug menu in the game
     if (show_debug_menu) {
         simple_timer += dt;
-        if (simple_timer > 0.5f) {
+        if (simple_timer > 0.1f) {
             unsigned fps = dt > 0.0 ? static_cast<unsigned>(1.0 / dt) : 0;
             text.add_text(-0.93f, 0.9f, 0.003f,
                           "x %f y %f z %f\n"
@@ -34,9 +34,9 @@ void hi::Engine::update() noexcept {
 
     // Movement
     if (key::Control_L)
-        world.camera.movement_speed = 50.f;
+        world.camera.movement_speed = 100.f;
     else
-        world.camera.movement_speed = 5.0f;
+        world.camera.movement_speed = 10.0f;
 
     if (key::w || key::W) {
         world.camera.move_forward(dt);
@@ -64,8 +64,8 @@ void hi::Engine::update() noexcept {
     }
 
     if (should_update_view) {
-        world.camera.look_at(world.view);
         world.update_pos();
+        world.camera.look_at(world.view);
     }
 }
 

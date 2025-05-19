@@ -129,7 +129,7 @@ struct Opengl {
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glClearColor(50.f / 255.f, 222.f / 255.f, 240.f / 255.f, 1.0f);
+        glClearColor(0.1f, 0.2f, 0.3f, 1.f);
     }
     ~Opengl() noexcept {}
 

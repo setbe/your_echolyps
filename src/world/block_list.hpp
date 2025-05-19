@@ -29,6 +29,8 @@ var Air =         {0, 8, 0b1111'1100, true};
 
 var Cobblestone = make(T::cobblestone, ONE);
 var Water = make(T::water, ONE, true);
+var Ice = make(T::ice, ONE);
+var Sand = make(T::sand, ONE);
 
 var Grass = make(T::grass_top, THREE_SIDES);
 var Dirt = make(T::grass_bottom, ONE);

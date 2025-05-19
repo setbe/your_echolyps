@@ -6,37 +6,44 @@ SRC_DIR = src
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/echolyps
 
+ARCH := $(shell $(CXX) -dumpmachine | grep -oE '^[^-\n]+')
 SRC_FILES := $(shell find $(SRC_DIR) -type f \( -name "*.cpp" -o -name "*.c" \))
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_FILES))
 
+
 # Compilation flags
+COMMON_MACROS = 
+
 DEBUG_CXXFLAGS = -std=c++20 -O0 -g
 RELEASE_CXXFLAGS = \
-  -std=c++20 -O3 -march=native -DNDEBUG \
+  -std=c++20 $(COMMON_MACROS) -O3 -march=native -DNDEBUG \
   -flto \
   -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -fno-ident
 
 PUBLIC_CXXFLAGS = \
-  -std=c++20 -O2 -DNDEBUG -DHI_PUBLIC \
+  -std=c++20 $(COMMON_MACROS) -O2 -DNDEBUG -DHI_PUBLIC \
   -flto \
   -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -fno-ident
 
 MINI_CXXFLAGS = \
-  -std=c++20 -Os -DNDEBUG \
+  -std=c++20 $(COMMON_MACROS) -Os -DNDEBUG \
   -flto \
   -fno-exceptions -fno-use-cxa-atexit -fomit-frame-pointer \
   -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables \
   -fno-ident
 
+
 # Linker flags
-DEBUG_LDFLAGS = -lX11 -lGL -ldl -latomic
-RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl -latomic
-PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl -latomic
-MINI_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic -lX11 -lGL -ldl -latomic
+COMMON_LIBS = -lX11 -lGL -ldl -latomic
+
+DEBUG_LDFLAGS = $(COMMON_LIBS)
+RELEASE_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic $(COMMON_LIBS)
+PUBLIC_LDFLAGS  = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic $(COMMON_LIBS)
+MINI_LDFLAGS = -Wl,--gc-sections -Wl,-s -Wl,-z,norelro -Wl,-Bdynamic $(COMMON_LIBS)
 
 default: shaders clean run
 

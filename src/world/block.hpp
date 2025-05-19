@@ -41,33 +41,44 @@ struct Block {
         }
     }; // struct TextureProtocol
 
-    // 12 bits - actual id, 4 bits - texture layout
-    // 0000'0000'0000|0000 actual id|texture layout
+    /* 12 bits - actual id, 4 bits - texture layout
+
+       0000'0000'0000 | 0000      actual id | texture layout
+
+   */
     uint16_t id;
 
-    // 4 bits - light, 6 - visible faces, 1 - is transparent
-    // 5 - reserved
-    // 0000|0000'00|0 light|faces|is_transparent
+    /* 4 bits - light, 6 - visible faces, 1 - is transparent
+       5 - reserved
+
+       0000 | 0000'00 | 0        light | faces | transparent
+
+   */
     uint16_t flags;
 
-    // Constructors
+    // 0000'0000'0000 | 0000 <=> actual id | texture layout
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
     inline constexpr Block(uint16_t id, uint8_t light, uint8_t faces,
                            bool transparent = false) noexcept
         : id{id}, flags{make_flags(light, faces, transparent)} {}
 
+    // 0000'0000'0000 | 0000 <=> actual id | texture layout
     inline constexpr Block(uint16_t id = 0, uint16_t flags = 0) noexcept
         : id{id}, flags{flags} {}
 
+    // 0000'0000'0000 | 0000 <=> actual id | texture layout
     static constexpr uint16_t make_id(uint16_t raw_id,
                                       uint16_t proto) noexcept {
         return static_cast<uint16_t>((raw_id & 0x0FFF) |
                                      ((proto & 0x000F) << 12));
     }
 
+    // 0000 | 0000'00 | 0  <=> light | faces | transparent
     static constexpr uint16_t make_flags(uint8_t light, uint8_t faces,
                                          bool transparent) noexcept {
-        return static_cast<uint16_t>((light & 0x0F) | ((faces & 0x3F) << 4) |
-                                     (transparent ? (1 << 10) : 0));
+        return static_cast<uint16_t>(((light & 0x0F) << 12) |
+                                     ((faces & 0x3F) << 6) |
+                                     (transparent ? (1 << 5) : 0));
     }
 
     // Accessors
@@ -75,26 +86,43 @@ struct Block {
     inline constexpr uint16_t texture_protocol() const noexcept {
         return (id >> 12) & 0x000F;
     }
-    inline constexpr uint8_t light() const noexcept { return flags & 0x000F; }
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
+    inline constexpr uint8_t light() const noexcept {
+        return (flags >> 12) & 0x0F;
+    }
+
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
     inline constexpr uint8_t faces() const noexcept {
         return (flags >> 4) & 0x003F;
     }
+
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
     inline constexpr bool transparent() const noexcept {
         return ((flags >> 10) & 0x0001) != 0;
     }
 
+    // 0000'0000'0000 | 0000 <=> actual id | texture layout
     inline void set_block_id(uint16_t block_id) noexcept {
         id = static_cast<uint16_t>((id & 0xF000) | (block_id & 0x0FFF));
     }
+
+    // 0000'0000'0000 | 0000 <=> actual id | texture layout
     inline void set_texture_protocol(uint16_t proto) noexcept {
         id = static_cast<uint16_t>((id & 0x0FFF) | ((proto & 0x000F) << 12));
     }
-    inline void set_light(uint8_t l) noexcept {
-        flags = static_cast<uint16_t>((flags & ~0x000F) | (l & 0x0F));
+
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
+    inline constexpr void set_light(uint8_t light) noexcept {
+        flags =
+            static_cast<uint16_t>((flags & 0x0FFF) | ((light & 0x0F) << 12));
     }
+
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
     inline void set_faces(uint8_t f) noexcept {
         flags = static_cast<uint16_t>((flags & ~0x03F0) | ((f & 0x3F) << 4));
     }
+
+    // 0000 | 0000'00 | 0 <=> light | faces | transparent
     inline void set_transparent(bool t) noexcept {
         flags = t ? static_cast<uint16_t>(flags | (1 << 10))
                   : static_cast<uint16_t>(flags & ~(1 << 10));

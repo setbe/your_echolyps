@@ -20,6 +20,9 @@ struct World {
 
     int center_cx = -9999, center_cy = -9999, center_cz = -9999;
 
+    int pos_update_cooldown = 0;
+    constexpr static int POS_UPDATE_DELAY = 5;
+
     World() noexcept : camera{}, terrain{} {
         camera.position[0] = 0.f;
         camera.position[1] = 100.f;
@@ -38,12 +41,12 @@ struct World {
         camera.look_at(view);
     }
 
-    void update() noexcept { terrain.upload_ready_chunks(); }
+    void update() noexcept { terrain.update(center_cx, center_cy, center_cz); }
 
     void draw() const noexcept { terrain.draw(projection, view); }
 
     inline int chunk_coord(float pos, int size) const {
-        return static_cast<int>(std::floor(pos / float(size)));
+        return static_cast<int>(math::floorf(pos / float(size)));
     }
 
     void update_pos() {
@@ -60,20 +63,11 @@ struct World {
 
         terrain.center_chunk.store(Chunk::Key{cx, cy, cz});
 
-        std::unordered_set<Chunk::Key, Chunk::Key::Hash> needed;
-
-        for (int dz = -Terrain::STREAM_RADIUS; dz <= Terrain::STREAM_RADIUS;
-             ++dz)
-            for (int dy = -Terrain::STREAM_RADIUS; dy <= Terrain::STREAM_RADIUS;
-                 ++dy)
-                for (int dx = -Terrain::STREAM_RADIUS;
-                     dx <= Terrain::STREAM_RADIUS; ++dx) {
-                    Chunk::Key key{cx + dx, cy + dy, cz + dz};
-                    needed.insert(key);
-                    terrain.request_chunk(key, cx, cy, cz);
-                }
-
-        terrain.unload_chunks_not_in(needed);
+        terrain.pending_to_request.clear();
+        terrain.pending_index = 0;
+        terrain.wave_radius = 0;
+        terrain.filling_pending = true;
+        terrain.pending_center = Chunk::Key{cx, cy, cz};
     }
 };
 
