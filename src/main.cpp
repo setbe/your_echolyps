@@ -12,19 +12,38 @@ void hi::Engine::update() noexcept {
     double dt = hi::calculate_delta_time();
     static float simple_timer{0.f};
 
+    // FPS history
+    static constexpr int FPS_HISTORY_SIZE = 100;
+    static float fps_history[FPS_HISTORY_SIZE] = {};
+    static int fps_index = 0;
+    static int fps_count = 0;
+
+    float current_fps = dt > 0.0 ? static_cast<float>(1.0 / dt) : 0.0f;
+
+    // Update history
+    fps_history[fps_index] = current_fps;
+    fps_index = (fps_index + 1) % FPS_HISTORY_SIZE;
+    if (fps_count < FPS_HISTORY_SIZE)
+        ++fps_count;
+
+    // Compute average
+    float avg_fps = 0.0f;
+    for (int i = 0; i < fps_count; ++i)
+        avg_fps += fps_history[i];
+    avg_fps /= fps_count;
+
     // Render debug menu in the game
     if (show_debug_menu) {
         simple_timer += dt;
         if (simple_timer > 0.1f) {
-            unsigned fps = dt > 0.0 ? static_cast<unsigned>(1.0 / dt) : 0;
-            text.add_text(-0.93f, 0.9f, 0.003f,
-                          "x %f y %f z %f\n"
-                          "fps: %d\n"
-                          "delta: %f\n",
-                          world.camera.position[0], // x
-                          world.camera.position[1], // y
-                          world.camera.position[2], // z
-                          fps, static_cast<float>(dt) * 1000);
+            text.add_text(
+                -0.93f, 0.9f, 0.003f,
+                "x %f y %f z %f\n"
+                "fps: %d (avg: %d)\n"
+                "delta: %f ms\n",
+                world.camera.position[0], world.camera.position[1],
+                world.camera.position[2], static_cast<int>(current_fps),
+                static_cast<int>(avg_fps), static_cast<float>(dt) * 1000);
             text.upload();
             simple_timer = 0.f;
         }

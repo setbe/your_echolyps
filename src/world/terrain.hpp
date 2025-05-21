@@ -38,9 +38,9 @@ struct Terrain {
         }
     }; // struct PrioritizedKey
 
-    constexpr static unsigned char THREADS_NUM = 4;
+    constexpr static unsigned char THREADS_NUM = 2;
     static constexpr int STREAM_RADIUS = 16;
-    static constexpr unsigned MAX_LOADED_CHUNKS = 512;
+    static constexpr unsigned MAX_LOADED_CHUNKS = 1024;
     static constexpr unsigned TOTAL_VERT_CAP =
         UINT32_MAX / 2.2f / sizeof(Vertex);
 

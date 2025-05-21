@@ -69,6 +69,8 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                  atlas_pixels);
     hi::free(atlas_pixels, TEX_SIZE);
 
+    pending_to_request.reserve(MAX_LOADED_CHUNKS);
+
     // give the job for the workers
     for (auto &worker : workers) {
         worker = std::thread([this] {
