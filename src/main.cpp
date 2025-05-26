@@ -1,4 +1,3 @@
-#define HIGUI_GLYPH_USE_STATIC_DRAW
 #include "engine/engine.hpp"
 
 inline static bool show_debug_menu = false;
@@ -36,14 +35,17 @@ void hi::Engine::update() noexcept {
     if (show_debug_menu) {
         simple_timer += dt;
         if (simple_timer > 0.1f) {
-            text.add_text(
-                -0.93f, 0.9f, 0.003f,
-                "x %f y %f z %f\n"
-                "fps: %d (avg: %d)\n"
-                "delta: %f ms\n",
-                world.camera.position[0], world.camera.position[1],
-                world.camera.position[2], static_cast<int>(current_fps),
-                static_cast<int>(avg_fps), static_cast<float>(dt) * 1000);
+            text.add_text(-0.93f, 0.9f, 0.003f,
+                          "x %f y %f z %f\n"
+                          "fps: %d (avg: %d)\n"
+                          "delta: %f ms\n",
+                          world.camera.position[0],      // x
+                          world.camera.position[1],      // y
+                          world.camera.position[2],      // z
+                          static_cast<int>(current_fps), // fps
+                          static_cast<int>(avg_fps),     // fps (average)
+                          static_cast<float>(dt) * 1000  // delta time
+            );
             text.upload();
             simple_timer = 0.f;
         }
@@ -100,7 +102,7 @@ void hi::Engine::key_up(const hi::Callback &cb, key::KeyCode key) noexcept {
     Engine *e = cb.get_user_data<Engine>();
     using key::KeyCode;
     switch (key) {
-    case KeyCode::F3: {
+    case KeyCode::F4: {
         if (e->config.is_wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         } else {
@@ -109,13 +111,18 @@ void hi::Engine::key_up(const hi::Callback &cb, key::KeyCode key) noexcept {
         e->config.is_wireframe = !e->config.is_wireframe;
     } break;
 
-    case KeyCode::F2: {
+    case KeyCode::F3: {
         show_debug_menu = !show_debug_menu;
     } break;
 
-    case KeyCode::F1: {
+    case KeyCode::F2: {
         e->surface.set_cursor_visible(e->config.is_cursor);
         e->config.is_cursor = !e->config.is_cursor;
+    } break;
+
+    case KeyCode::F1: {
+        e->surface.set_fullscreen(e->config.is_fullscreen);
+        e->config.is_fullscreen = !e->config.is_fullscreen;
     } break;
 
     case KeyCode::Escape: {

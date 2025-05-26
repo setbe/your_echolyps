@@ -72,8 +72,12 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
     pending_to_request.reserve(MAX_LOADED_CHUNKS);
 
     // give the job for the workers
-    for (auto &worker : workers) {
-        worker = std::thread([this] {
+    unsigned num_threads = std::thread::hardware_concurrency();
+    unsigned count = (num_threads <= 4) ? 1 : num_threads - 3;
+
+    workers.reserve(count);
+    for (unsigned i = 0; i < count; ++i) {
+        workers.emplace_back([this] {
             while (running) {
                 Key key;
                 {
@@ -87,7 +91,6 @@ Terrain::Terrain() noexcept : shader_program{terrain_vert, terrain_frag} {
                     pending_set.erase(key);
                 }
 
-                // Check old tasks
                 Key center = center_chunk.load();
                 int dist = std::abs(center.x - key.x) +
                            std::abs(center.y - key.y) +
@@ -185,6 +188,7 @@ void Terrain::unload_chunks_not_in(
             free_chunk_slot(mesh.vertex_offset, mesh.vertex_count);
             mesh_map.erase(*it);
             block_map.erase(*it);
+            neighbor_cache.erase(*it);
             it = loaded_chunks.erase(it);
         } else {
             ++it;

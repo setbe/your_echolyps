@@ -39,6 +39,9 @@ struct Surface {
     inline void set_title(const char *title) const noexcept {
         window::set_title(handler_, title);
     }
+    inline void set_fullscreen(bool enabled) const noexcept {
+        window::set_fullscreen(handler_, enabled);
+    }
     inline void swap_buffers() const noexcept {
         window::swap_buffers(get_graphics_context());
     }

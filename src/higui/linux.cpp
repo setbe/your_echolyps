@@ -400,20 +400,27 @@ void load_gl() noexcept {
     debug_print("Vendor: %s\n", glGetString(GL_VENDOR));
 }
 
-bool is_anisotropy_supported() noexcept {
-    const char *exts =
-        reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
-    return exts && std::strstr(exts, "GL_EXT_texture_filter_anisotropic");
-}
+void set_fullscreen(const Handler handler, bool enabled) noexcept {
+    Atom wm_state = XInternAtom(dsp, "_NET_WM_STATE", False);
+    Atom fullscreen = XInternAtom(dsp, "_NET_WM_STATE_FULLSCREEN", False);
 
-float query_max_anisotropy() noexcept {
-    float max = 1.0f;
-    glGetFloatv(0x84FF /*GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT*/, &max);
-    return max;
-}
+    XEvent xev{};
+    xev.xclient.type = ClientMessage;
+    xev.xclient.send_event = True;
+    xev.xclient.display = dsp;
+    xev.xclient.window = win;
+    xev.xclient.message_type = wm_state;
+    xev.xclient.format = 32;
+    xev.xclient.data.l[0] = enabled ? 1 : 0; // _NET_WM_STATE_ADD or REMOVE
+    xev.xclient.data.l[1] = fullscreen;
+    xev.xclient.data.l[2] = 0; // no second property
+    xev.xclient.data.l[3] = 1; // normal source (application)
+    xev.xclient.data.l[4] = 0;
 
-void set_fullscreen(const Handler, bool) noexcept {
-    // not implemented
+    XSendEvent(dsp, DefaultRootWindow(dsp), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &xev);
+
+    XFlush(dsp);
 }
 
 void center_cursor(const Handler handler) noexcept {

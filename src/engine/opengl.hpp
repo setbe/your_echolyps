@@ -135,30 +135,4 @@ struct Texture {
     void bind(unsigned target) const noexcept { glBindTexture(target, id); }
     static void unbind(unsigned target) noexcept { glBindTexture(target, 0); }
 }; // struct Texture
-
-struct Anisotropy {
-    // is supported GL_EXT_texture_filter_anisotropic
-    static bool is_supported() noexcept {
-        return hi::window::is_anisotropy_supported();
-    }
-
-    // Max anisotropy level (1.0 = enabled)
-    static float max_level() noexcept {
-        return hi::window::query_max_anisotropy();
-    }
-
-    // Apply to GL_TEXTURE_2D
-    static void apply(uint32_t texture_id, float level = -1.0f) noexcept {
-        if (!is_supported())
-            return;
-
-        float max = max_level();
-        if (level <= 0.0f || level > max)
-            level = max;
-
-        glBindTexture(GL_TEXTURE_2D, texture_id);
-        glTexParameterf(GL_TEXTURE_2D, 0x84FE /*GL_TEXTURE_MAX_ANISOTROPY_EXT*/,
-                        level);
-    }
-}; // struct Anisotropy
 }; // namespace hi::gl

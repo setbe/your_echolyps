@@ -38,7 +38,6 @@ struct Terrain {
         }
     }; // struct PrioritizedKey
 
-    constexpr static unsigned char THREADS_NUM = 2;
     static constexpr int STREAM_RADIUS = 16;
     static constexpr unsigned MAX_LOADED_CHUNKS = 1024;
     static constexpr unsigned TOTAL_VERT_CAP =
@@ -56,6 +55,8 @@ struct Terrain {
     unsigned view_location = 0;
     unsigned atlas_location = 0;
 
+    mutable std::unordered_map<Key, std::unique_ptr<Block[]>, Key::Hash>
+        neighbor_cache;
     std::unordered_map<Key, std::unique_ptr<Block[]>, Key::Hash> block_map;
     std::unordered_map<Key, Chunk::Mesh, Key::Hash> mesh_map;
     std::unordered_set<Key, Key::Hash> loaded_chunks;
@@ -78,7 +79,7 @@ struct Terrain {
 
     std::condition_variable cv;
     std::atomic<bool> running = true;
-    std::array<std::thread, THREADS_NUM> workers;
+    std::vector<std::thread> workers;
 
     Terrain() noexcept;
     ~Terrain() noexcept;

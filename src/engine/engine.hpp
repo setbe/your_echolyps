@@ -54,8 +54,10 @@ struct hi::Engine {
         int height{};
         bool is_wireframe;
         bool is_cursor;
+        bool is_fullscreen;
 
-        inline Config() noexcept : is_wireframe{false}, is_cursor{false} {}
+        constexpr inline Config() noexcept
+            : is_wireframe{false}, is_cursor{false}, is_fullscreen{false} {}
     }; // struct Config
 
   private:

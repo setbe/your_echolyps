@@ -81,14 +81,14 @@ const Block *Terrain::get_block_at_extended(
     if (it != block_map.end()) {
         neighbor = it->second.get();
     } else {
-        auto temp_it = temp_neighbors.find(nk);
-        if (temp_it == temp_neighbors.end()) {
+        auto cache_it = neighbor_cache.find(nk);
+        if (cache_it == neighbor_cache.end()) {
             auto tmp = std::make_unique<Block[]>(Chunk::BLOCKS_PER_CHUNK);
             Chunk::generate_chunk(nk.x, nk.y, nk.z, tmp.get(), noise);
             neighbor = tmp.get();
-            temp_neighbors.emplace(nk, std::move(tmp));
+            neighbor_cache.emplace(nk, std::move(tmp));
         } else {
-            neighbor = temp_it->second.get();
+            neighbor = cache_it->second.get();
         }
     }
 
