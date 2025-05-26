@@ -19,11 +19,11 @@ struct TextRenderer {
     GlyphInfo *font_glyphs;
     static constexpr unsigned FONT_GLYPHS_SIZE = sizeof(GlyphInfo) * FONT_COUNT;
 
-    Opengl::VAO vao;
-    Opengl::VBO vbo;
-    Opengl::EBO ebo;
-    Opengl::ShaderProgram shader_program;
-    Opengl::Texture text_atlas;
+    gl::VAO vao;
+    gl::VBO vbo;
+    gl::EBO ebo;
+    gl::ShaderProgram shader_program;
+    gl::Texture text_atlas;
     int text_atlas_location = 0;
 
     static constexpr int FONT_ASCENT = 16;

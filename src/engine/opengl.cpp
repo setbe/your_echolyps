@@ -1,6 +1,6 @@
 #include "opengl.hpp"
 
-namespace hi {
+namespace hi::gl {
 // helper function: guarantees error handling, returns the shader
 unsigned compile_shader(unsigned type, const char *source) noexcept {
     unsigned shader = glCreateShader(type);

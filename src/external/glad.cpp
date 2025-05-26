@@ -303,7 +303,7 @@ PFNGLGENVERTEXARRAYSPROC glad_glGenVertexArrays = nullptr;
 // PFNGLGETDOUBLEVPROC glad_glGetDoublev = nullptr;
 // PFNGLGETERRORPROC glad_glGetError = nullptr;
 // PFNGLGETFLOATI_VPROC glad_glGetFloati_v = nullptr;
-// PFNGLGETFLOATVPROC glad_glGetFloatv = nullptr;
+PFNGLGETFLOATVPROC glad_glGetFloatv = nullptr;
 // PFNGLGETFRAGDATAINDEXPROC glad_glGetFragDataIndex = nullptr;
 // PFNGLGETFRAGDATALOCATIONPROC glad_glGetFragDataLocation = nullptr;
 // PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC
@@ -767,7 +767,7 @@ PFNGLTEXIMAGE2DPROC glad_glTexImage2D = nullptr;
 // PFNGLTEXIMAGE3DMULTISAMPLEPROC glad_glTexImage3DMultisample = nullptr;
 // PFNGLTEXPARAMETERIIVPROC glad_glTexParameterIiv = nullptr;
 // PFNGLTEXPARAMETERIUIVPROC glad_glTexParameterIuiv = nullptr;
-// PFNGLTEXPARAMETERFPROC glad_glTexParameterf = nullptr;
+PFNGLTEXPARAMETERFPROC glad_glTexParameterf = nullptr;
 // PFNGLTEXPARAMETERFVPROC glad_glTexParameterfv = nullptr;
 PFNGLTEXPARAMETERIPROC glad_glTexParameteri = nullptr;
 // PFNGLTEXPARAMETERIVPROC glad_glTexParameteriv = nullptr;
@@ -981,7 +981,7 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
     // glad_glPointSize = (PFNGLPOINTSIZEPROC)load("glPointSize");
     glad_glPolygonMode = (PFNGLPOLYGONMODEPROC)load("glPolygonMode");
     // glad_glScissor = (PFNGLSCISSORPROC)load("glScissor");
-    // glad_glTexParameterf = (PFNGLTEXPARAMETERFPROC)load("glTexParameterf");
+    glad_glTexParameterf = (PFNGLTEXPARAMETERFPROC)load("glTexParameterf");
     // glad_glTexParameterfv =
     // (PFNGLTEXPARAMETERFVPROC)load("glTexParameterfv");
     glad_glTexParameteri = (PFNGLTEXPARAMETERIPROC)load("glTexParameteri");
@@ -1015,8 +1015,9 @@ static void load_GL_VERSION_1_0(GLADloadproc load) {
     // (PFNGLREADPIXELSPROC)load("glReadPixels"); glad_glGetBooleanv =
     // (PFNGLGETBOOLEANVPROC)load("glGetBooleanv"); glad_glGetDoublev =
     // (PFNGLGETDOUBLEVPROC)load("glGetDoublev"); glad_glGetError =
-    // (PFNGLGETERRORPROC)load("glGetError"); glad_glGetFloatv =
-    // (PFNGLGETFLOATVPROC)load("glGetFloatv"); glad_glGetIntegerv =
+    // (PFNGLGETERRORPROC)load("glGetError");
+    glad_glGetFloatv = (PFNGLGETFLOATVPROC)load("glGetFloatv");
+    // glad_glGetIntegerv =
     // (PFNGLGETINTEGERVPROC)load("glGetIntegerv");
     glad_glGetString = (PFNGLGETSTRINGPROC)load("glGetString");
     // glad_glGetTexImage =

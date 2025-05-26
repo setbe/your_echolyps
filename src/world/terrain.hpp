@@ -48,10 +48,10 @@ struct Terrain {
 
     NoiseSystem noise;
 
-    Opengl::VAO vao;
-    Opengl::VBO vbo;
-    hi::Opengl::Texture atlas;
-    Opengl::ShaderProgram shader_program;
+    gl::VAO vao;
+    gl::VBO vbo;
+    gl::Texture atlas;
+    gl::ShaderProgram shader_program;
     unsigned projection_location = 0;
     unsigned view_location = 0;
     unsigned atlas_location = 0;

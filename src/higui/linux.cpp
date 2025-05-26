@@ -1,8 +1,10 @@
+#include "../external/glad.hpp"
 #include "debug.hpp"
 #include "platform.hpp"
 #include "types.hpp"
 
-#include "../external/glad.hpp"
+#include <cstring>
+
 #include <GL/glx.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -396,6 +398,18 @@ void load_gl() noexcept {
     debug_print("OpenGL version: %s\n", glGetString(GL_VERSION));
     debug_print("Renderer: %s\n", glGetString(GL_RENDERER));
     debug_print("Vendor: %s\n", glGetString(GL_VENDOR));
+}
+
+bool is_anisotropy_supported() noexcept {
+    const char *exts =
+        reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
+    return exts && std::strstr(exts, "GL_EXT_texture_filter_anisotropic");
+}
+
+float query_max_anisotropy() noexcept {
+    float max = 1.0f;
+    glGetFloatv(0x84FF /*GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT*/, &max);
+    return max;
 }
 
 void set_fullscreen(const Handler, bool) noexcept {

@@ -89,7 +89,7 @@ void hi::Engine::update() noexcept {
 }
 
 void hi::Engine::draw() const noexcept {
-    opengl.clear();
+    gl::clear();
     world.draw();
     if (show_debug_menu)
         text.draw();

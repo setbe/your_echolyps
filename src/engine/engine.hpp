@@ -34,6 +34,16 @@ struct Font {
     Font(Font &&) = delete;
     Font &operator=(Font &&) = delete;
 }; // struct Font
+
+struct OpenglLoader {
+    inline explicit OpenglLoader() noexcept { gl::load(); }
+    inline ~OpenglLoader() noexcept {}
+    OpenglLoader(const OpenglLoader &) = delete;
+    OpenglLoader &operator=(const OpenglLoader &) = delete;
+    OpenglLoader(OpenglLoader &&) = delete;
+    OpenglLoader &operator=(OpenglLoader &&) = delete;
+}; // struct OpenglLoader
+
 } // namespace hi
 
 // ===== Engine: Connects all shit together
@@ -56,7 +66,7 @@ struct hi::Engine {
   public:
     Callback callback;
     Surface surface;
-    Opengl opengl;
+    OpenglLoader gl_loader;
     TextRenderer text;
     World world;
     Font font;
@@ -70,7 +80,7 @@ struct hi::Engine {
                    /* key_up */ key_up,
                    /* focus_gained */ noop,
                    /* focus_lost */ noop},
-          surface{&callback, width, height}, opengl{}, world{}, font{},
+          surface{&callback, width, height}, gl_loader{}, world{}, font{},
           config{} {
 
         callback.resize = framebuffer_resize_adapter;
@@ -96,7 +106,7 @@ struct hi::Engine {
                                    int height) noexcept {
         config.width = width;
         config.height = height;
-        opengl.framebuffer_resize(callback, width, height);
+        gl::framebuffer_resize(callback, width, height);
         world.update_projection(width, height);
         this->draw();
         hi::sleep(7); // hack

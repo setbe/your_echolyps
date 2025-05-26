@@ -1890,10 +1890,10 @@ GLAPI PFNGLPOLYGONMODEPROC glad_glPolygonMode;
 //                                          GLsizei height);
 // GLAPI PFNGLSCISSORPROC glad_glScissor;
 // #define glScissor glad_glScissor
-// typedef void(APIENTRYP PFNGLTEXPARAMETERFPROC)(GLenum target, GLenum pname,
-//                                                GLfloat param);
-// GLAPI PFNGLTEXPARAMETERFPROC glad_glTexParameterf;
-// #define glTexParameterf glad_glTexParameterf
+typedef void(APIENTRYP PFNGLTEXPARAMETERFPROC)(GLenum target, GLenum pname,
+                                               GLfloat param);
+GLAPI PFNGLTEXPARAMETERFPROC glad_glTexParameterf;
+#define glTexParameterf glad_glTexParameterf
 // typedef void(APIENTRYP PFNGLTEXPARAMETERFVPROC)(GLenum target, GLenum pname,
 //                                                 const GLfloat *params);
 // GLAPI PFNGLTEXPARAMETERFVPROC glad_glTexParameterfv;
@@ -1998,9 +1998,9 @@ GLAPI PFNGLBLENDFUNCPROC glad_glBlendFunc;
 // typedef GLenum(APIENTRYP PFNGLGETERRORPROC)(void);
 // GLAPI PFNGLGETERRORPROC glad_glGetError;
 // #define glGetError glad_glGetError
-// typedef void(APIENTRYP PFNGLGETFLOATVPROC)(GLenum pname, GLfloat *data);
-// GLAPI PFNGLGETFLOATVPROC glad_glGetFloatv;
-// #define glGetFloatv glad_glGetFloatv
+typedef void(APIENTRYP PFNGLGETFLOATVPROC)(GLenum pname, GLfloat *data);
+GLAPI PFNGLGETFLOATVPROC glad_glGetFloatv;
+#define glGetFloatv glad_glGetFloatv
 // typedef void(APIENTRYP PFNGLGETINTEGERVPROC)(GLenum pname, GLint *data);
 // GLAPI PFNGLGETINTEGERVPROC glad_glGetIntegerv;
 // #define glGetIntegerv glad_glGetIntegerv

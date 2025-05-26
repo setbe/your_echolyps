@@ -75,6 +75,10 @@ void create_class() noexcept;
 // No need for this. We need create `window class` on Windows only
 #endif
 
+bool is_anisotropy_supported() noexcept;
+
+float query_max_anisotropy() noexcept;
+
 void center_cursor(const Handler handler) noexcept;
 void set_cursor_visible(const Handler handler, bool visible) noexcept;
 void send_quit_message(const Handler handler) noexcept;

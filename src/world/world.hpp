@@ -20,9 +20,6 @@ struct World {
 
     int center_cx = -9999, center_cy = -9999, center_cz = -9999;
 
-    int pos_update_cooldown = 0;
-    constexpr static int POS_UPDATE_DELAY = 5;
-
     World() noexcept : camera{}, terrain{} {
         camera.position[0] = 0.f;
         camera.position[1] = 100.f;
